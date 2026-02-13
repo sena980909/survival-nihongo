@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { stages } from "@/data/stages";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+function getOpenAI() {
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
 
 const RESPONSE_FORMAT_INSTRUCTION = `
 あなたは必ず以下のJSON形式で応答してください。JSON以外の文字は絶対に含めないでください。
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAI().chat.completions.create({
       model: "gpt-4o-mini",
       messages: chatMessages,
       temperature: 0.8,
