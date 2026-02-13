@@ -2,16 +2,13 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useGameStore, ChatMessage } from "@/store/gameStore";
+import { useGameStore } from "@/store/gameStore";
 import { stages } from "@/data/stages";
+import { dialogueMap } from "@/data/dialogues";
+import { DialogueChoice } from "@/data/dialogue";
 import HpBar from "./HpBar";
 import DamageEffect from "./DamageEffect";
-
-interface Choice {
-  text: string;
-  text_ko: string;
-  is_best: boolean;
-}
+import EducationPanel from "./EducationPanel";
 
 const NPC_EMOTIONS: Record<string, string> = {
   neutral: "😐",
@@ -19,6 +16,15 @@ const NPC_EMOTIONS: Record<string, string> = {
   happy: "😊",
   confused: "😕",
 };
+
+function shuffleChoices(choices: DialogueChoice[]): DialogueChoice[] {
+  const shuffled = [...choices];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
 
 export default function ChatRoom() {
   const {
@@ -29,6 +35,10 @@ export default function ChatRoom() {
     isLoading,
     isGameOver,
     isStageCleared,
+    currentStepId,
+    completedMilestones,
+    currentEducation,
+    showEducation,
     addMessage,
     takeDamage,
     useHint,
@@ -36,9 +46,13 @@ export default function ChatRoom() {
     resetStage,
     setLoading,
     selectStage,
+    setCurrentStep,
+    addMilestone,
+    setEducation,
+    toggleEducation,
   } = useGameStore();
 
-  const [choices, setChoices] = useState<Choice[]>([]);
+  const [shuffledChoices, setShuffledChoices] = useState<DialogueChoice[]>([]);
   const [damageEffect, setDamageEffect] = useState<{
     damage: number;
     feedback: string;
@@ -52,6 +66,7 @@ export default function ChatRoom() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const stage = stages.find((s) => s.id === currentStageId);
+  const dialogue = currentStageId ? dialogueMap[currentStageId] : null;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -59,12 +74,11 @@ export default function ChatRoom() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, choices]);
+  }, [messages, shuffledChoices]);
 
-  // TTS 재생 (Promise로 완료까지 대기 가능)
+  // TTS
   const playTts = (messageId: string, text: string): Promise<void> => {
     return new Promise((resolve) => {
-      // 이미 재생 중이면 중지
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current = null;
@@ -90,21 +104,17 @@ export default function ChatRoom() {
           const url = URL.createObjectURL(blob);
           const audio = new Audio(url);
           audioRef.current = audio;
-
           audio.onended = () => {
             setPlayingId(null);
             audioRef.current = null;
             URL.revokeObjectURL(url);
             resolve();
           };
-
           audio.onerror = () => {
             setPlayingId(null);
-            audioRef.current = null;
             URL.revokeObjectURL(url);
             resolve();
           };
-
           audio.play().catch(() => {
             setPlayingId(null);
             resolve();
@@ -117,196 +127,208 @@ export default function ChatRoom() {
     });
   };
 
-  // NPC 첫 인사
-  const initConversation = useCallback(async () => {
-    if (!stage || initialized) return;
+  // 초기화: 스크립트에서 첫 스텝 로드
+  const initConversation = useCallback(() => {
+    if (!stage || !dialogue || initialized) return;
     setInitialized(true);
-    setLoading(true);
 
     addMessage({
       id: `sys-${Date.now()}`,
       role: "system",
       content: stage.description,
     });
-
     addMessage({
       id: `mission-${Date.now()}`,
       role: "system",
       content: `🎯 미션: ${stage.mission}`,
     });
 
-    try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          stageId: stage.id,
-          messages: [],
-          isInitial: true,
-        }),
-      });
+    const firstStep = dialogue.steps.find(
+      (s) => s.id === dialogue.initialStepId
+    );
+    if (!firstStep) return;
 
-      const data = await res.json();
+    setCurrentStep(firstStep.id);
 
-      if (data.error) {
-        throw new Error(data.error);
-      }
+    const npcId = `npc-${Date.now()}`;
+    addMessage({
+      id: npcId,
+      role: "npc",
+      content: firstStep.npcLine,
+      pronunciation: firstStep.npcLinePronunciation,
+      npcEmotion: firstStep.npcEmotion,
+      feedback: firstStep.npcLineKo,
+    });
 
-      const npcId = `npc-${Date.now()}`;
-      addMessage({
-        id: npcId,
-        role: "npc",
-        content: data.npc_reply,
-        npcEmotion: data.npc_emotion,
-        feedback: data.npc_reply_ko,
-        missionStatus: data.mission_status,
-      });
+    setShuffledChoices(shuffleChoices(firstStep.choices));
+    setEducation(firstStep.education);
 
-      if (data.choices) {
-        setChoices(data.choices);
-      }
-
-      if (autoTts && data.npc_reply) {
-        playTts(npcId, data.npc_reply);
-      }
-    } catch {
-      addMessage({
-        id: `err-${Date.now()}`,
-        role: "system",
-        content: "⚠️ NPC 연결에 실패했습니다. 다시 시도해주세요.",
-      });
+    if (autoTts) {
+      playTts(npcId, firstStep.npcLine);
     }
-
-    setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stage, initialized]);
+  }, [stage, dialogue, initialized]);
 
   useEffect(() => {
     initConversation();
   }, [initConversation]);
 
-  const selectChoice = async (choice: Choice) => {
-    if (isLoading || !stage) return;
+  // 선택지 클릭
+  const selectChoice = async (choice: DialogueChoice) => {
+    if (isLoading || !stage || !dialogue) return;
+    setLoading(true);
 
     const userMsgId = `user-${Date.now()}`;
     addMessage({
       id: userMsgId,
       role: "user",
       content: choice.text,
-      feedback: choice.text_ko,
+      pronunciation: choice.pronunciation,
+      feedback: choice.textKo,
     });
 
-    setChoices([]);
-    setLoading(true);
+    setShuffledChoices([]);
 
-    try {
-      // 내 대사 TTS + API 호출을 동시에 시작
-      const chatHistory = messages
-        .filter((m) => m.role !== "system")
-        .map((m) => ({
-          role: m.role === "npc" ? "assistant" : "user",
-          content: m.content,
-        }));
-      chatHistory.push({ role: "user", content: choice.text });
+    // 내 대사 TTS
+    if (autoTts) {
+      await playTts(userMsgId, choice.text);
+    }
 
-      const apiPromise = fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          stageId: stage.id,
-          messages: chatHistory,
-        }),
-      }).then((res) => res.json());
-
-      // 내 대사 TTS 재생 (autoTts일 때만)
-      if (autoTts) {
-        await playTts(userMsgId, choice.text);
+    // 데미지 처리
+    if (choice.damage > 0 || choice.feedback) {
+      setDamageEffect({
+        damage: choice.damage,
+        feedback: choice.feedback,
+        isNatural: choice.damage === 0,
+      });
+      if (choice.damage > 0) {
+        takeDamage(choice.damage);
       }
+    }
 
-      // 내 TTS 끝난 뒤 API 응답 대기
-      const data = await apiPromise;
+    // 현재 스텝에서 milestone 체크
+    const currentStep = dialogue.steps.find((s) => s.id === currentStepId);
+    if (
+      currentStep?.isMilestone &&
+      currentStep.milestoneTag &&
+      choice.quality !== "bad"
+    ) {
+      addMilestone(currentStep.milestoneTag);
+    }
 
-      // 데미지 이펙트
-      if (data.damage > 0 || data.feedback) {
-        setDamageEffect({
-          damage: data.damage || 0,
-          feedback: data.feedback || "",
-          isNatural: !data.damage || data.damage === 0,
-        });
+    // 교육 콘텐츠 설정
+    if (currentStep) {
+      setEducation(currentStep.education);
+    }
 
-        if (data.damage > 0) {
-          takeDamage(data.damage);
-        }
-      }
+    // 미션 완료 체크
+    const allMilestones = [...completedMilestones];
+    if (
+      currentStep?.isMilestone &&
+      currentStep.milestoneTag &&
+      choice.quality !== "bad" &&
+      !allMilestones.includes(currentStep.milestoneTag)
+    ) {
+      allMilestones.push(currentStep.milestoneTag);
+    }
+    const missionComplete = dialogue.requiredMilestones.every((m) =>
+      allMilestones.includes(m)
+    );
 
-      const npcMsgId = `npc-${Date.now()}`;
+    if (missionComplete && choice.nextStepId === "END") {
+      const npcId = `npc-${Date.now()}`;
       addMessage({
-        id: npcMsgId,
+        id: npcId,
         role: "npc",
-        content: data.npc_reply,
-        npcEmotion: data.npc_emotion,
-        damage: data.damage,
-        feedback: data.npc_reply_ko,
-        missionStatus: data.mission_status,
+        content: dialogue.successNpcLine,
+        pronunciation: dialogue.successNpcLinePronunciation,
+        npcEmotion: "happy",
+        feedback: dialogue.successNpcLineKo,
+        missionStatus: "success",
       });
+      if (autoTts) await playTts(npcId, dialogue.successNpcLine);
+      clearStage();
+      setLoading(false);
+      return;
+    }
 
-      // NPC 대사 TTS 재생 (내 대사 끝난 뒤 순차 실행)
-      if (autoTts && data.npc_reply) {
-        await playTts(npcMsgId, data.npc_reply);
-      }
-
-      if (data.choices) {
-        setChoices(data.choices);
-      }
-
-      if (data.mission_status === "success") {
-        clearStage();
-      }
-    } catch {
+    // 다음 스텝 로드
+    const nextStepId = choice.nextStepId === "END" ? null : choice.nextStepId;
+    if (!nextStepId) {
+      // END인데 미션 미완료 → 마지막 NPC 대사 후 종료
+      const npcId = `npc-${Date.now()}`;
       addMessage({
-        id: `err-${Date.now()}`,
-        role: "system",
-        content: "⚠️ 응답을 받지 못했습니다.",
+        id: npcId,
+        role: "npc",
+        content: dialogue.successNpcLine,
+        pronunciation: dialogue.successNpcLinePronunciation,
+        npcEmotion: "happy",
+        feedback: dialogue.successNpcLineKo,
+        missionStatus: "success",
       });
+      if (autoTts) await playTts(npcId, dialogue.successNpcLine);
+      clearStage();
+      setLoading(false);
+      return;
+    }
+
+    const nextStep = dialogue.steps.find((s) => s.id === nextStepId);
+    if (!nextStep) {
+      setLoading(false);
+      return;
+    }
+
+    setCurrentStep(nextStep.id);
+
+    const npcMsgId = `npc-${Date.now()}`;
+    addMessage({
+      id: npcMsgId,
+      role: "npc",
+      content: nextStep.npcLine,
+      pronunciation: nextStep.npcLinePronunciation,
+      npcEmotion: choice.npcEmotion,
+      feedback: nextStep.npcLineKo,
+    });
+
+    setShuffledChoices(shuffleChoices(nextStep.choices));
+    setEducation(nextStep.education);
+
+    if (autoTts) {
+      await playTts(npcMsgId, nextStep.npcLine);
     }
 
     setLoading(false);
   };
 
+  // 힌트
   const handleHint = async () => {
     if (!useHint() || !stage) return;
     setLoading(true);
 
     try {
-      const chatHistory = messages
-        .filter((m) => m.role !== "system")
-        .map((m) => ({
-          role: m.role === "npc" ? "assistant" : "user",
-          content: m.content,
-        }));
-
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          action: "hint",
           stageId: stage.id,
-          messages: chatHistory,
-          useHint: true,
+          currentStepId,
         }),
       });
-
       const data = await res.json();
-
       addMessage({
         id: `hint-${Date.now()}`,
         role: "system",
-        content: `🧪 파파고 물약 사용!\n\n💡 ${data.feedback || "가장 자연스러운 표현을 골라보세요!"}`,
+        content: `🧪 파파고 물약 사용!\n\n💡 ${data.hint || "가장 자연스러운 표현을 골라보세요!"}`,
       });
     } catch {
+      // fallback: 스크립트에서 best choice feedback
+      const currentStep = dialogue?.steps.find((s) => s.id === currentStepId);
+      const best = currentStep?.choices.find((c) => c.quality === "best");
       addMessage({
-        id: `err-${Date.now()}`,
+        id: `hint-${Date.now()}`,
         role: "system",
-        content: "⚠️ 힌트를 가져오지 못했습니다.",
+        content: `🧪 파파고 물약 사용!\n\n💡 ${best?.feedback || "가장 자연스러운 표현을 골라보세요!"}`,
       });
     }
 
@@ -319,7 +341,7 @@ export default function ChatRoom() {
       audioRef.current = null;
     }
     setInitialized(false);
-    setChoices([]);
+    setShuffledChoices([]);
     useGameStore.setState({ currentStageId: null, messages: [] });
   };
 
@@ -359,7 +381,6 @@ export default function ChatRoom() {
                 ? "bg-blue-600/30 text-blue-400"
                 : "bg-gray-800 text-gray-500"
             }`}
-            title="자동 음성 재생"
           >
             {autoTts ? "🔊" : "🔇"}
           </button>
@@ -403,26 +424,28 @@ export default function ChatRoom() {
                       <p className="text-white text-sm whitespace-pre-wrap">
                         {msg.content}
                       </p>
-                      {/* 한국어 번역 토글 */}
-                      {msg.feedback && (
-                        <AnimatePresence>
-                          {showTranslation === msg.id && (
-                            <motion.p
-                              initial={{ opacity: 0, height: 0 }}
-                              animate={{ opacity: 1, height: "auto" }}
-                              exit={{ opacity: 0, height: 0 }}
-                              className="text-xs text-gray-400 mt-2 pt-2 border-t border-gray-700"
-                            >
-                              🇰🇷 {msg.feedback}
-                            </motion.p>
-                          )}
-                        </AnimatePresence>
+                      {msg.pronunciation && (
+                        <p className="text-purple-400 text-xs mt-1">
+                          ({msg.pronunciation})
+                        </p>
                       )}
+                      <AnimatePresence>
+                        {showTranslation === msg.id && msg.feedback && (
+                          <motion.p
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="text-xs text-gray-400 mt-2 pt-2 border-t border-gray-700"
+                          >
+                            🇰🇷 {msg.feedback}
+                          </motion.p>
+                        )}
+                      </AnimatePresence>
                     </div>
                     <div className="flex gap-3 mt-1">
                       <button
                         onClick={() => playTts(msg.id, msg.content)}
-                        className={`text-xs flex items-center gap-1 transition ${
+                        className={`text-xs transition ${
                           playingId === msg.id
                             ? "text-blue-400"
                             : "text-gray-500 hover:text-gray-300"
@@ -451,6 +474,11 @@ export default function ChatRoom() {
                 <div className="max-w-[80%]">
                   <div className="bg-blue-600 rounded-2xl rounded-tr-sm px-4 py-3">
                     <p className="text-white text-sm">{msg.content}</p>
+                    {msg.pronunciation && (
+                      <p className="text-blue-200 text-xs mt-0.5">
+                        ({msg.pronunciation})
+                      </p>
+                    )}
                     {msg.feedback && (
                       <p className="text-blue-200 text-xs mt-1">
                         {msg.feedback}
@@ -483,14 +511,8 @@ export default function ChatRoom() {
             <div className="bg-gray-800 rounded-2xl px-4 py-3">
               <div className="flex gap-1">
                 <span className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" />
-                <span
-                  className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"
-                  style={{ animationDelay: "0.1s" }}
-                />
-                <span
-                  className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"
-                  style={{ animationDelay: "0.2s" }}
-                />
+                <span className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: "0.1s" }} />
+                <span className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }} />
               </div>
             </div>
           </motion.div>
@@ -537,7 +559,7 @@ export default function ChatRoom() {
                   <button
                     onClick={() => {
                       setInitialized(false);
-                      setChoices([]);
+                      setShuffledChoices([]);
                       selectStage(currentStageId + 1);
                     }}
                     className="w-full py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-xl transition"
@@ -548,7 +570,7 @@ export default function ChatRoom() {
                 <button
                   onClick={() => {
                     setInitialized(false);
-                    setChoices([]);
+                    setShuffledChoices([]);
                     resetStage();
                     if (currentStageId) selectStage(currentStageId);
                   }}
@@ -568,25 +590,32 @@ export default function ChatRoom() {
         )}
       </AnimatePresence>
 
-      {/* 선택지 영역 */}
+      {/* 교육 패널 */}
+      {currentEducation && !isGameOver && !isStageCleared && (
+        <EducationPanel
+          education={currentEducation}
+          show={showEducation}
+          onToggle={toggleEducation}
+        />
+      )}
+
+      {/* 선택지 */}
       <div className="bg-gray-900 border-t border-gray-800 px-4 py-3 shrink-0">
-        {choices.length > 0 && !isGameOver && !isStageCleared ? (
+        {shuffledChoices.length > 0 && !isGameOver && !isStageCleared ? (
           <div className="space-y-2">
             <div className="flex items-center justify-between mb-1">
               <p className="text-xs text-gray-400">답변을 선택하세요</p>
               <button
                 onClick={handleHint}
-                disabled={
-                  hintCount <= 0 || isLoading
-                }
+                disabled={hintCount <= 0 || isLoading}
                 className="px-3 py-1 bg-purple-700 hover:bg-purple-600 disabled:bg-gray-700 disabled:opacity-50 text-white rounded-lg text-xs font-bold transition"
               >
                 🧪 힌트 ({hintCount})
               </button>
             </div>
-            {choices.map((choice, idx) => (
+            {shuffledChoices.map((choice, idx) => (
               <motion.button
-                key={idx}
+                key={choice.id}
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: idx * 0.1 }}
@@ -594,10 +623,11 @@ export default function ChatRoom() {
                 disabled={isLoading}
                 className="w-full text-left px-4 py-3 bg-gray-800 hover:bg-gray-700 active:bg-gray-600 border border-gray-700 hover:border-gray-500 rounded-xl transition disabled:opacity-50"
               >
-                <p className="text-white text-sm font-medium">
-                  {choice.text}
+                <p className="text-white text-sm font-medium">{choice.text}</p>
+                <p className="text-purple-400 text-xs mt-0.5">
+                  ({choice.pronunciation})
                 </p>
-                <p className="text-gray-400 text-xs mt-1">{choice.text_ko}</p>
+                <p className="text-gray-400 text-xs mt-0.5">{choice.textKo}</p>
               </motion.button>
             ))}
           </div>
@@ -606,7 +636,7 @@ export default function ChatRoom() {
           !isStageCleared && (
             <div className="text-center py-2">
               <p className="text-gray-500 text-sm">
-                {isLoading ? "NPC가 대답하는 중..." : "선택지를 기다리는 중..."}
+                {isLoading ? "처리 중..." : ""}
               </p>
             </div>
           )

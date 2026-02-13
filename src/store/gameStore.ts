@@ -1,15 +1,14 @@
 import { create } from "zustand";
+import { EducationContent } from "@/data/dialogue";
 
 export interface ChatMessage {
   id: string;
   role: "user" | "npc" | "system";
   content: string;
+  pronunciation?: string;
   npcEmotion?: "neutral" | "angry" | "happy" | "confused";
   damage?: number;
   feedback?: string;
-  isNatural?: boolean;
-  grammarError?: boolean;
-  politenessLevel?: string;
   missionStatus?: "ongoing" | "success" | "fail";
 }
 
@@ -23,6 +22,14 @@ interface GameState {
   maxHints: number;
   isGameOver: boolean;
   isStageCleared: boolean;
+
+  // 스크립트 엔진
+  currentStepId: string | null;
+  completedMilestones: string[];
+
+  // 교육
+  currentEducation: EducationContent | null;
+  showEducation: boolean;
 
   // 채팅
   messages: ChatMessage[];
@@ -38,6 +45,10 @@ interface GameState {
   resetStage: () => void;
   resetGame: () => void;
   setLoading: (loading: boolean) => void;
+  setCurrentStep: (stepId: string | null) => void;
+  addMilestone: (tag: string) => void;
+  setEducation: (edu: EducationContent | null) => void;
+  toggleEducation: () => void;
 }
 
 export const useGameStore = create<GameState>((set, get) => ({
@@ -49,6 +60,10 @@ export const useGameStore = create<GameState>((set, get) => ({
   maxHints: 3,
   isGameOver: false,
   isStageCleared: false,
+  currentStepId: null,
+  completedMilestones: [],
+  currentEducation: null,
+  showEducation: false,
   messages: [],
   isLoading: false,
 
@@ -59,6 +74,10 @@ export const useGameStore = create<GameState>((set, get) => ({
       messages: [],
       isGameOver: false,
       isStageCleared: false,
+      currentStepId: null,
+      completedMilestones: [],
+      currentEducation: null,
+      showEducation: false,
     }),
 
   addMessage: (message: ChatMessage) =>
@@ -103,6 +122,10 @@ export const useGameStore = create<GameState>((set, get) => ({
       messages: [],
       isGameOver: false,
       isStageCleared: false,
+      currentStepId: null,
+      completedMilestones: [],
+      currentEducation: null,
+      showEducation: false,
     }),
 
   resetGame: () =>
@@ -114,7 +137,26 @@ export const useGameStore = create<GameState>((set, get) => ({
       messages: [],
       isGameOver: false,
       isStageCleared: false,
+      currentStepId: null,
+      completedMilestones: [],
+      currentEducation: null,
+      showEducation: false,
     }),
 
   setLoading: (loading: boolean) => set({ isLoading: loading }),
+
+  setCurrentStep: (stepId: string | null) => set({ currentStepId: stepId }),
+
+  addMilestone: (tag: string) =>
+    set((state) => ({
+      completedMilestones: state.completedMilestones.includes(tag)
+        ? state.completedMilestones
+        : [...state.completedMilestones, tag],
+    })),
+
+  setEducation: (edu: EducationContent | null) =>
+    set({ currentEducation: edu, showEducation: false }),
+
+  toggleEducation: () =>
+    set((state) => ({ showEducation: !state.showEducation })),
 }));
