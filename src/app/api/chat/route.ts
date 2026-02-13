@@ -7,32 +7,83 @@ function getOpenAI() {
 }
 
 const RESPONSE_FORMAT_INSTRUCTION = `
-あなたは必ず以下のJSON形式のみで応答してください。JSONの前後に余計な文字やマークダウンのコードブロック記号（\`\`\`）は絶対に含めないでください。純粋なJSONのみを返してください。
+あなたは必ず以下のJSON形式のみで応答してください。
+JSONの前後にマークダウンのコードブロック記号は絶対に含めないでください。純粋なJSONのみを返してください。
 
 {
   "npc_reply": "（日本語でNPCとしての返答。必ず何か言ってください）",
+  "npc_reply_ko": "（npc_replyの韓国語翻訳）",
   "npc_emotion": "neutral",
-  "user_evaluation": {
-    "is_natural": true,
-    "grammar_error": false,
-    "politeness_level": "polite"
-  },
-  "damage": 0,
-  "feedback": "（韓国語でユーザーへのフィードバック）",
+  "choices": [
+    {
+      "text": "（日本語の選択肢1 - 最も適切な回答）",
+      "text_ko": "（韓国語翻訳）",
+      "is_best": true
+    },
+    {
+      "text": "（日本語の選択肢2 - まあまあの回答）",
+      "text_ko": "（韓国語翻訳）",
+      "is_best": false
+    },
+    {
+      "text": "（日本語の選択肢3 - 不適切な回答）",
+      "text_ko": "（韓国語翻訳）",
+      "is_best": false
+    }
+  ],
   "mission_status": "ongoing"
 }
 
-npc_emotion は "neutral", "angry", "happy", "confused" のいずれか。
-damage は 0~30 の数値。
-mission_status は "ongoing", "success", "fail" のいずれか。
+【重要ルール】
+- npc_reply: NPCのセリフ（日本語）。必ず入れること。
+- npc_reply_ko: NPCのセリフの韓国語翻訳。
+- npc_emotion: "neutral", "angry", "happy", "confused" のいずれか。
+- choices: 必ず3つの選択肢を提供。ユーザーが次に言うべきセリフの候補。
+  - 1つは最も適切（is_best: true）、残りは不適切または微妙な回答。
+  - 選択肢の順番はランダムにすること（正解を常に最初にしない）。
+  - 各選択肢に日本語(text)と韓国語翻訳(text_ko)を含める。
+- mission_status: "ongoing", "success", "fail" のいずれか。
+`;
+
+const EVALUATE_FORMAT_INSTRUCTION = `
+ユーザーが選択肢を選びました。その選択に対して評価し、会話を続けてください。
+必ず以下のJSON形式のみで応答してください。
+
+{
+  "npc_reply": "（選択に対するNPCの日本語返答）",
+  "npc_reply_ko": "（npc_replyの韓国語翻訳）",
+  "npc_emotion": "neutral",
+  "damage": 0,
+  "feedback": "（韓国語でフィードバック。なぜこの表現が良い/悪いか説明）",
+  "choices": [
+    {
+      "text": "（次の選択肢1）",
+      "text_ko": "（韓国語翻訳）",
+      "is_best": true
+    },
+    {
+      "text": "（次の選択肢2）",
+      "text_ko": "（韓国語翻訳）",
+      "is_best": false
+    },
+    {
+      "text": "（次の選択肢3）",
+      "text_ko": "（韓国語翻訳）",
+      "is_best": false
+    }
+  ],
+  "mission_status": "ongoing"
+}
 
 【ダメージ基準】
-- 完璧な回答: 0
-- 少し不自然: 5-10
-- 文法ミスあり: 10-15
-- 敬語ミス: 15-20
-- 意味が通じない: 20-25
-- 完全に的外れ: 25-30
+- 最も適切な選択肢を選んだ場合: 0
+- まあまあの選択肢を選んだ場合: 5-10
+- 不適切な選択肢を選んだ場合: 15-25
+
+【重要】
+- mission_status は会話の流れに応じて判断。ミッション目標を達成したら "success"。
+- 選択肢の順番はランダムにすること。
+- feedback は韓国語で、選んだ表現がなぜ良い/悪いかを説明すること。
 `;
 
 export async function POST(request: NextRequest) {
@@ -44,21 +95,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Stage not found" }, { status: 404 });
     }
 
-    let systemMessage = `${stage.systemPrompt}\n\n${RESPONSE_FORMAT_INSTRUCTION}`;
-
-    const chatMessages: OpenAI.ChatCompletionMessageParam[] = [
-      { role: "system", content: systemMessage },
-    ];
+    const chatMessages: OpenAI.ChatCompletionMessageParam[] = [];
 
     if (isInitial) {
-      // 초기 대화: NPC가 먼저 말하도록
+      chatMessages.push({
+        role: "system",
+        content: `${stage.systemPrompt}\n\n${RESPONSE_FORMAT_INSTRUCTION}`,
+      });
       chatMessages.push({
         role: "user",
         content:
-          "【システム指示】会話の最初です。NPCとして最初の一言を言ってください。ユーザーはまだ何も言っていません。damage は 0、feedback は空文字にしてください。npc_reply には必ずNPCの最初のセリフを入れてください。",
+          "【システム指示】会話開始。NPCとして最初の一言を言い、ユーザーが返答するための3つの選択肢を提示してください。",
       });
     } else {
-      // 일반 대화
+      chatMessages.push({
+        role: "system",
+        content: `${stage.systemPrompt}\n\n${EVALUATE_FORMAT_INSTRUCTION}`,
+      });
       chatMessages.push(
         ...messages.map((msg: { role: string; content: string }) => ({
           role: msg.role === "npc" ? ("assistant" as const) : ("user" as const),
@@ -71,7 +124,7 @@ export async function POST(request: NextRequest) {
       chatMessages.push({
         role: "user",
         content:
-          "【システム】ユーザーがヒントアイテム「パパゴ物薬」を使いました。次の返答に対する完璧な模範解答を韓国語と日本語の両方で feedback フィールドに含めてください。damage は 0 にしてください。npc_reply では通常通りNPCとして会話を続けてください。",
+          "【システム】ヒント使用。選択肢のうちどれが最適かを feedback で韓国語で詳しく説明してください。damage は 0 にしてください。",
       });
     }
 
@@ -79,14 +132,13 @@ export async function POST(request: NextRequest) {
       model: "gpt-4o-mini",
       messages: chatMessages,
       temperature: 0.8,
-      max_tokens: 500,
+      max_tokens: 800,
     });
 
     const responseText = completion.choices[0].message.content || "";
 
     let parsed;
     try {
-      // 마크다운 코드블록 제거
       const cleaned = responseText
         .replace(/```json\s*/gi, "")
         .replace(/```\s*/g, "")
@@ -94,24 +146,34 @@ export async function POST(request: NextRequest) {
       const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
       parsed = JSON.parse(jsonMatch ? jsonMatch[0] : cleaned);
     } catch {
-      // JSON 파싱 실패 시 텍스트를 npc_reply로 사용
       parsed = {
-        npc_reply: responseText.replace(/```json\s*/gi, "").replace(/```\s*/g, "").replace(/[{}]/g, "").trim() || "すみません、もう一度お願いします。",
-        npc_emotion: "neutral",
-        user_evaluation: {
-          is_natural: true,
-          grammar_error: false,
-          politeness_level: "polite",
-        },
+        npc_reply: "すみません、もう一度お願いします。",
+        npc_reply_ko: "죄송합니다, 다시 한번 부탁드립니다.",
+        npc_emotion: "confused",
         damage: 0,
         feedback: "",
+        choices: [
+          { text: "はい、わかりました。", text_ko: "네, 알겠습니다.", is_best: true },
+          { text: "えっと...", text_ko: "음...", is_best: false },
+          { text: "何ですか？", text_ko: "뭐요?", is_best: false },
+        ],
         mission_status: "ongoing",
       };
     }
 
-    // npc_reply가 비어있으면 fallback
+    // npc_reply 빈 값 방지
     if (!parsed.npc_reply || parsed.npc_reply.trim() === "") {
       parsed.npc_reply = "すみません、もう一度お願いします。";
+      parsed.npc_reply_ko = "죄송합니다, 다시 한번 부탁드립니다.";
+    }
+
+    // choices가 없거나 비어있으면 기본값
+    if (!parsed.choices || !Array.isArray(parsed.choices) || parsed.choices.length === 0) {
+      parsed.choices = [
+        { text: "はい。", text_ko: "네.", is_best: true },
+        { text: "いいえ。", text_ko: "아니요.", is_best: false },
+        { text: "もう一度お願いします。", text_ko: "다시 한번 부탁합니다.", is_best: false },
+      ];
     }
 
     return NextResponse.json(parsed);

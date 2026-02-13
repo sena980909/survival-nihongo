@@ -7,6 +7,12 @@ import { stages } from "@/data/stages";
 import HpBar from "./HpBar";
 import DamageEffect from "./DamageEffect";
 
+interface Choice {
+  text: string;
+  text_ko: string;
+  is_best: boolean;
+}
+
 const NPC_EMOTIONS: Record<string, string> = {
   neutral: "😐",
   angry: "😠",
@@ -32,7 +38,7 @@ export default function ChatRoom() {
     selectStage,
   } = useGameStore();
 
-  const [input, setInput] = useState("");
+  const [choices, setChoices] = useState<Choice[]>([]);
   const [damageEffect, setDamageEffect] = useState<{
     damage: number;
     feedback: string;
@@ -41,6 +47,7 @@ export default function ChatRoom() {
   const [initialized, setInitialized] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [autoTts, setAutoTts] = useState(true);
+  const [showTranslation, setShowTranslation] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -52,7 +59,44 @@ export default function ChatRoom() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, choices]);
+
+  const playTts = async (messageId: string, text: string) => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+      if (playingId === messageId) {
+        setPlayingId(null);
+        return;
+      }
+    }
+
+    setPlayingId(messageId);
+    try {
+      const res = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+
+      if (!res.ok) throw new Error("TTS failed");
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audioRef.current = audio;
+
+      audio.onended = () => {
+        setPlayingId(null);
+        audioRef.current = null;
+        URL.revokeObjectURL(url);
+      };
+
+      await audio.play();
+    } catch {
+      setPlayingId(null);
+    }
+  };
 
   // NPC 첫 인사
   const initConversation = useCallback(async () => {
@@ -60,7 +104,6 @@ export default function ChatRoom() {
     setInitialized(true);
     setLoading(true);
 
-    // 스테이지 설명 시스템 메시지
     addMessage({
       id: `sys-${Date.now()}`,
       role: "system",
@@ -86,16 +129,24 @@ export default function ChatRoom() {
 
       const data = await res.json();
 
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
       const npcId = `npc-${Date.now()}`;
       addMessage({
         id: npcId,
         role: "npc",
         content: data.npc_reply,
         npcEmotion: data.npc_emotion,
+        feedback: data.npc_reply_ko,
         missionStatus: data.mission_status,
       });
 
-      // 자동 TTS
+      if (data.choices) {
+        setChoices(data.choices);
+      }
+
       if (autoTts && data.npc_reply) {
         playTts(npcId, data.npc_reply);
       }
@@ -108,32 +159,36 @@ export default function ChatRoom() {
     }
 
     setLoading(false);
-  }, [stage, initialized, setLoading, addMessage, autoTts]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage, initialized]);
 
   useEffect(() => {
     initConversation();
   }, [initConversation]);
 
-  const sendMessage = async () => {
-    if (!input.trim() || isLoading || !stage) return;
+  const selectChoice = async (choice: Choice) => {
+    if (isLoading || !stage) return;
 
-    const userMsg: ChatMessage = {
+    // 유저가 선택한 답변 표시
+    addMessage({
       id: `user-${Date.now()}`,
       role: "user",
-      content: input.trim(),
-    };
-    addMessage(userMsg);
-    setInput("");
+      content: choice.text,
+      feedback: choice.text_ko,
+    });
+
+    setChoices([]);
     setLoading(true);
 
     try {
-      const chatHistory = [
-        ...messages.filter((m) => m.role !== "system"),
-        userMsg,
-      ].map((m) => ({
-        role: m.role === "npc" ? "assistant" : "user",
-        content: m.content,
-      }));
+      const chatHistory = messages
+        .filter((m) => m.role !== "system")
+        .map((m) => ({
+          role: m.role === "npc" ? "assistant" : "user",
+          content: m.content,
+        }));
+
+      chatHistory.push({ role: "user", content: choice.text });
 
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -146,12 +201,12 @@ export default function ChatRoom() {
 
       const data = await res.json();
 
-      // 데미지 이펙트 표시
+      // 데미지 이펙트
       if (data.damage > 0 || data.feedback) {
         setDamageEffect({
-          damage: data.damage,
-          feedback: data.feedback,
-          isNatural: data.user_evaluation?.is_natural ?? true,
+          damage: data.damage || 0,
+          feedback: data.feedback || "",
+          isNatural: !data.damage || data.damage === 0,
         });
 
         if (data.damage > 0) {
@@ -159,7 +214,6 @@ export default function ChatRoom() {
         }
       }
 
-      // NPC 응답 추가
       const npcMsgId = `npc-${Date.now()}`;
       addMessage({
         id: npcMsgId,
@@ -167,14 +221,14 @@ export default function ChatRoom() {
         content: data.npc_reply,
         npcEmotion: data.npc_emotion,
         damage: data.damage,
-        feedback: data.feedback,
-        isNatural: data.user_evaluation?.is_natural,
-        grammarError: data.user_evaluation?.grammar_error,
-        politenessLevel: data.user_evaluation?.politeness_level,
+        feedback: data.npc_reply_ko,
         missionStatus: data.mission_status,
       });
 
-      // 자동 TTS
+      if (data.choices) {
+        setChoices(data.choices);
+      }
+
       if (autoTts && data.npc_reply) {
         playTts(npcMsgId, data.npc_reply);
       }
@@ -220,15 +274,7 @@ export default function ChatRoom() {
       addMessage({
         id: `hint-${Date.now()}`,
         role: "system",
-        content: `🧪 파파고 물약 사용! \n\n💡 모범 답안:\n${data.feedback}`,
-      });
-
-      addMessage({
-        id: `npc-${Date.now()}`,
-        role: "npc",
-        content: data.npc_reply,
-        npcEmotion: data.npc_emotion,
-        missionStatus: data.mission_status,
+        content: `🧪 파파고 물약 사용!\n\n💡 ${data.feedback || "가장 자연스러운 표현을 골라보세요!"}`,
       });
     } catch {
       addMessage({
@@ -241,50 +287,13 @@ export default function ChatRoom() {
     setLoading(false);
   };
 
-  const playTts = async (messageId: string, text: string) => {
-    // 이미 재생 중이면 중지
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-      if (playingId === messageId) {
-        setPlayingId(null);
-        return;
-      }
-    }
-
-    setPlayingId(messageId);
-    try {
-      const res = await fetch("/api/tts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
-      });
-
-      if (!res.ok) throw new Error("TTS failed");
-
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
-      audioRef.current = audio;
-
-      audio.onended = () => {
-        setPlayingId(null);
-        audioRef.current = null;
-        URL.revokeObjectURL(url);
-      };
-
-      await audio.play();
-    } catch {
-      setPlayingId(null);
-    }
-  };
-
   const goBack = () => {
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
     }
     setInitialized(false);
+    setChoices([]);
     useGameStore.setState({ currentStageId: null, messages: [] });
   };
 
@@ -292,7 +301,7 @@ export default function ChatRoom() {
 
   return (
     <div className="flex flex-col h-screen bg-gray-950">
-      {/* 데미지 이펙트 오버레이 */}
+      {/* 데미지 이펙트 */}
       {damageEffect && (
         <DamageEffect
           damage={damageEffect.damage}
@@ -303,7 +312,7 @@ export default function ChatRoom() {
       )}
 
       {/* 상단 바 */}
-      <div className="bg-gray-900 border-b border-gray-800 px-4 py-3">
+      <div className="bg-gray-900 border-b border-gray-800 px-4 py-3 shrink-0">
         <div className="flex items-center gap-3 mb-2">
           <button
             onClick={goBack}
@@ -328,9 +337,7 @@ export default function ChatRoom() {
           >
             {autoTts ? "🔊" : "🔇"}
           </button>
-          <div className="text-sm text-gray-400">
-            🧪 ×{hintCount}
-          </div>
+          <div className="text-sm text-gray-400">🧪 ×{hintCount}</div>
         </div>
         <HpBar />
       </div>
@@ -370,23 +377,59 @@ export default function ChatRoom() {
                       <p className="text-white text-sm whitespace-pre-wrap">
                         {msg.content}
                       </p>
+                      {/* 한국어 번역 토글 */}
+                      {msg.feedback && (
+                        <AnimatePresence>
+                          {showTranslation === msg.id && (
+                            <motion.p
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: "auto" }}
+                              exit={{ opacity: 0, height: 0 }}
+                              className="text-xs text-gray-400 mt-2 pt-2 border-t border-gray-700"
+                            >
+                              🇰🇷 {msg.feedback}
+                            </motion.p>
+                          )}
+                        </AnimatePresence>
+                      )}
                     </div>
-                    <button
-                      onClick={() => playTts(msg.id, msg.content)}
-                      className={`mt-1 text-xs flex items-center gap-1 transition ${
-                        playingId === msg.id
-                          ? "text-blue-400"
-                          : "text-gray-500 hover:text-gray-300"
-                      }`}
-                    >
-                      {playingId === msg.id ? "🔊 재생 중..." : "🔈 듣기"}
-                    </button>
+                    <div className="flex gap-3 mt-1">
+                      <button
+                        onClick={() => playTts(msg.id, msg.content)}
+                        className={`text-xs flex items-center gap-1 transition ${
+                          playingId === msg.id
+                            ? "text-blue-400"
+                            : "text-gray-500 hover:text-gray-300"
+                        }`}
+                      >
+                        {playingId === msg.id ? "🔊 재생 중..." : "🔈 듣기"}
+                      </button>
+                      {msg.feedback && (
+                        <button
+                          onClick={() =>
+                            setShowTranslation(
+                              showTranslation === msg.id ? null : msg.id
+                            )
+                          }
+                          className="text-xs text-gray-500 hover:text-gray-300 transition"
+                        >
+                          {showTranslation === msg.id
+                            ? "🇰🇷 번역 숨기기"
+                            : "🇰🇷 번역 보기"}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ) : (
                 <div className="max-w-[80%]">
                   <div className="bg-blue-600 rounded-2xl rounded-tr-sm px-4 py-3">
                     <p className="text-white text-sm">{msg.content}</p>
+                    {msg.feedback && (
+                      <p className="text-blue-200 text-xs mt-1">
+                        {msg.feedback}
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
@@ -420,7 +463,7 @@ export default function ChatRoom() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* 게임 오버 / 클리어 오버레이 */}
+      {/* 게임 오버 / 클리어 */}
       <AnimatePresence>
         {(isGameOver || isStageCleared) && (
           <motion.div
@@ -432,7 +475,9 @@ export default function ChatRoom() {
               initial={{ scale: 0.8 }}
               animate={{ scale: 1 }}
               className={`p-8 rounded-3xl text-center mx-4 max-w-sm w-full ${
-                isStageCleared ? "bg-green-950/90 border border-green-700" : "bg-red-950/90 border border-red-700"
+                isStageCleared
+                  ? "bg-green-950/90 border border-green-700"
+                  : "bg-red-950/90 border border-red-700"
               }`}
             >
               <div className="text-5xl mb-4">
@@ -456,6 +501,7 @@ export default function ChatRoom() {
                   <button
                     onClick={() => {
                       setInitialized(false);
+                      setChoices([]);
                       selectStage(currentStageId + 1);
                     }}
                     className="w-full py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-xl transition"
@@ -466,6 +512,7 @@ export default function ChatRoom() {
                 <button
                   onClick={() => {
                     setInitialized(false);
+                    setChoices([]);
                     resetStage();
                     if (currentStageId) selectStage(currentStageId);
                   }}
@@ -485,34 +532,49 @@ export default function ChatRoom() {
         )}
       </AnimatePresence>
 
-      {/* 입력 영역 */}
-      <div className="bg-gray-900 border-t border-gray-800 px-4 py-3">
-        <div className="flex gap-2">
-          <button
-            onClick={handleHint}
-            disabled={hintCount <= 0 || isLoading || isGameOver || isStageCleared}
-            className="px-3 py-2 bg-purple-700 hover:bg-purple-600 disabled:bg-gray-700 disabled:opacity-50 text-white rounded-xl text-sm font-bold transition shrink-0"
-            title="파파고 물약 (모범 답안 보기)"
-          >
-            🧪
-          </button>
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-            placeholder="일본어로 대답하세요..."
-            disabled={isLoading || isGameOver || isStageCleared}
-            className="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 text-sm disabled:opacity-50"
-          />
-          <button
-            onClick={sendMessage}
-            disabled={!input.trim() || isLoading || isGameOver || isStageCleared}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:opacity-50 text-white rounded-xl font-bold transition shrink-0"
-          >
-            전송
-          </button>
-        </div>
+      {/* 선택지 영역 */}
+      <div className="bg-gray-900 border-t border-gray-800 px-4 py-3 shrink-0">
+        {choices.length > 0 && !isGameOver && !isStageCleared ? (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-xs text-gray-400">답변을 선택하세요</p>
+              <button
+                onClick={handleHint}
+                disabled={
+                  hintCount <= 0 || isLoading
+                }
+                className="px-3 py-1 bg-purple-700 hover:bg-purple-600 disabled:bg-gray-700 disabled:opacity-50 text-white rounded-lg text-xs font-bold transition"
+              >
+                🧪 힌트 ({hintCount})
+              </button>
+            </div>
+            {choices.map((choice, idx) => (
+              <motion.button
+                key={idx}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: idx * 0.1 }}
+                onClick={() => selectChoice(choice)}
+                disabled={isLoading}
+                className="w-full text-left px-4 py-3 bg-gray-800 hover:bg-gray-700 active:bg-gray-600 border border-gray-700 hover:border-gray-500 rounded-xl transition disabled:opacity-50"
+              >
+                <p className="text-white text-sm font-medium">
+                  {choice.text}
+                </p>
+                <p className="text-gray-400 text-xs mt-1">{choice.text_ko}</p>
+              </motion.button>
+            ))}
+          </div>
+        ) : (
+          !isGameOver &&
+          !isStageCleared && (
+            <div className="text-center py-2">
+              <p className="text-gray-500 text-sm">
+                {isLoading ? "NPC가 대답하는 중..." : "선택지를 기다리는 중..."}
+              </p>
+            </div>
+          )
+        )}
       </div>
     </div>
   );
