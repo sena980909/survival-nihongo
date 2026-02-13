@@ -61,41 +61,60 @@ export default function ChatRoom() {
     scrollToBottom();
   }, [messages, choices]);
 
-  const playTts = async (messageId: string, text: string) => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-      if (playingId === messageId) {
-        setPlayingId(null);
-        return;
+  // TTS 재생 (Promise로 완료까지 대기 가능)
+  const playTts = (messageId: string, text: string): Promise<void> => {
+    return new Promise((resolve) => {
+      // 이미 재생 중이면 중지
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+        if (playingId === messageId) {
+          setPlayingId(null);
+          resolve();
+          return;
+        }
       }
-    }
 
-    setPlayingId(messageId);
-    try {
-      const res = await fetch("/api/tts", {
+      setPlayingId(messageId);
+
+      fetch("/api/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text }),
-      });
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error("TTS failed");
+          return res.blob();
+        })
+        .then((blob) => {
+          const url = URL.createObjectURL(blob);
+          const audio = new Audio(url);
+          audioRef.current = audio;
 
-      if (!res.ok) throw new Error("TTS failed");
+          audio.onended = () => {
+            setPlayingId(null);
+            audioRef.current = null;
+            URL.revokeObjectURL(url);
+            resolve();
+          };
 
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
-      audioRef.current = audio;
+          audio.onerror = () => {
+            setPlayingId(null);
+            audioRef.current = null;
+            URL.revokeObjectURL(url);
+            resolve();
+          };
 
-      audio.onended = () => {
-        setPlayingId(null);
-        audioRef.current = null;
-        URL.revokeObjectURL(url);
-      };
-
-      await audio.play();
-    } catch {
-      setPlayingId(null);
-    }
+          audio.play().catch(() => {
+            setPlayingId(null);
+            resolve();
+          });
+        })
+        .catch(() => {
+          setPlayingId(null);
+          resolve();
+        });
+    });
   };
 
   // NPC 첫 인사
@@ -169,9 +188,9 @@ export default function ChatRoom() {
   const selectChoice = async (choice: Choice) => {
     if (isLoading || !stage) return;
 
-    // 유저가 선택한 답변 표시
+    const userMsgId = `user-${Date.now()}`;
     addMessage({
-      id: `user-${Date.now()}`,
+      id: userMsgId,
       role: "user",
       content: choice.text,
       feedback: choice.text_ko,
@@ -181,25 +200,31 @@ export default function ChatRoom() {
     setLoading(true);
 
     try {
+      // 내 대사 TTS + API 호출을 동시에 시작
       const chatHistory = messages
         .filter((m) => m.role !== "system")
         .map((m) => ({
           role: m.role === "npc" ? "assistant" : "user",
           content: m.content,
         }));
-
       chatHistory.push({ role: "user", content: choice.text });
 
-      const res = await fetch("/api/chat", {
+      const apiPromise = fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           stageId: stage.id,
           messages: chatHistory,
         }),
-      });
+      }).then((res) => res.json());
 
-      const data = await res.json();
+      // 내 대사 TTS 재생 (autoTts일 때만)
+      if (autoTts) {
+        await playTts(userMsgId, choice.text);
+      }
+
+      // 내 TTS 끝난 뒤 API 응답 대기
+      const data = await apiPromise;
 
       // 데미지 이펙트
       if (data.damage > 0 || data.feedback) {
@@ -225,12 +250,13 @@ export default function ChatRoom() {
         missionStatus: data.mission_status,
       });
 
-      if (data.choices) {
-        setChoices(data.choices);
+      // NPC 대사 TTS 재생 (내 대사 끝난 뒤 순차 실행)
+      if (autoTts && data.npc_reply) {
+        await playTts(npcMsgId, data.npc_reply);
       }
 
-      if (autoTts && data.npc_reply) {
-        playTts(npcMsgId, data.npc_reply);
+      if (data.choices) {
+        setChoices(data.choices);
       }
 
       if (data.mission_status === "success") {
@@ -431,6 +457,16 @@ export default function ChatRoom() {
                       </p>
                     )}
                   </div>
+                  <button
+                    onClick={() => playTts(msg.id, msg.content)}
+                    className={`mt-1 text-xs flex items-center gap-1 transition justify-end w-full ${
+                      playingId === msg.id
+                        ? "text-blue-400"
+                        : "text-gray-500 hover:text-gray-300"
+                    }`}
+                  >
+                    {playingId === msg.id ? "🔊 재생 중..." : "🔈 듣기"}
+                  </button>
                 </div>
               )}
             </motion.div>
