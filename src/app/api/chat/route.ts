@@ -7,20 +7,24 @@ function getOpenAI() {
 }
 
 const RESPONSE_FORMAT_INSTRUCTION = `
-あなたは必ず以下のJSON形式で応答してください。JSON以外の文字は絶対に含めないでください。
+あなたは必ず以下のJSON形式のみで応答してください。JSONの前後に余計な文字やマークダウンのコードブロック記号（\`\`\`）は絶対に含めないでください。純粋なJSONのみを返してください。
 
 {
-  "npc_reply": "（日本語でNPCとしての返答）",
-  "npc_emotion": "neutral" または "angry" または "happy" または "confused",
+  "npc_reply": "（日本語でNPCとしての返答。必ず何か言ってください）",
+  "npc_emotion": "neutral",
   "user_evaluation": {
-    "is_natural": true または false,
-    "grammar_error": true または false,
-    "politeness_level": "polite" または "casual" または "rude"
+    "is_natural": true,
+    "grammar_error": false,
+    "politeness_level": "polite"
   },
-  "damage": 0から30の数値,
-  "feedback": "（韓国語でユーザーへのフィードバック。文法の間違いや改善点を教える）",
-  "mission_status": "ongoing" または "success" または "fail"
+  "damage": 0,
+  "feedback": "（韓国語でユーザーへのフィードバック）",
+  "mission_status": "ongoing"
 }
+
+npc_emotion は "neutral", "angry", "happy", "confused" のいずれか。
+damage は 0~30 の数値。
+mission_status は "ongoing", "success", "fail" のいずれか。
 
 【ダメージ基準】
 - 完璧な回答: 0
@@ -33,22 +37,35 @@ const RESPONSE_FORMAT_INSTRUCTION = `
 
 export async function POST(request: NextRequest) {
   try {
-    const { stageId, messages, useHint } = await request.json();
+    const { stageId, messages, useHint, isInitial } = await request.json();
 
     const stage = stages.find((s) => s.id === stageId);
     if (!stage) {
       return NextResponse.json({ error: "Stage not found" }, { status: 404 });
     }
 
-    const systemMessage = `${stage.systemPrompt}\n\n${RESPONSE_FORMAT_INSTRUCTION}`;
+    let systemMessage = `${stage.systemPrompt}\n\n${RESPONSE_FORMAT_INSTRUCTION}`;
 
     const chatMessages: OpenAI.ChatCompletionMessageParam[] = [
       { role: "system", content: systemMessage },
-      ...messages.map((msg: { role: string; content: string }) => ({
-        role: msg.role === "npc" ? "assistant" : ("user" as const),
-        content: msg.content,
-      })),
     ];
+
+    if (isInitial) {
+      // 초기 대화: NPC가 먼저 말하도록
+      chatMessages.push({
+        role: "user",
+        content:
+          "【システム指示】会話の最初です。NPCとして最初の一言を言ってください。ユーザーはまだ何も言っていません。damage は 0、feedback は空文字にしてください。npc_reply には必ずNPCの最初のセリフを入れてください。",
+      });
+    } else {
+      // 일반 대화
+      chatMessages.push(
+        ...messages.map((msg: { role: string; content: string }) => ({
+          role: msg.role === "npc" ? ("assistant" as const) : ("user" as const),
+          content: msg.content,
+        }))
+      );
+    }
 
     if (useHint) {
       chatMessages.push({
@@ -69,11 +86,17 @@ export async function POST(request: NextRequest) {
 
     let parsed;
     try {
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-      parsed = JSON.parse(jsonMatch ? jsonMatch[0] : responseText);
+      // 마크다운 코드블록 제거
+      const cleaned = responseText
+        .replace(/```json\s*/gi, "")
+        .replace(/```\s*/g, "")
+        .trim();
+      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+      parsed = JSON.parse(jsonMatch ? jsonMatch[0] : cleaned);
     } catch {
+      // JSON 파싱 실패 시 텍스트를 npc_reply로 사용
       parsed = {
-        npc_reply: responseText,
+        npc_reply: responseText.replace(/```json\s*/gi, "").replace(/```\s*/g, "").replace(/[{}]/g, "").trim() || "すみません、もう一度お願いします。",
         npc_emotion: "neutral",
         user_evaluation: {
           is_natural: true,
@@ -84,6 +107,11 @@ export async function POST(request: NextRequest) {
         feedback: "",
         mission_status: "ongoing",
       };
+    }
+
+    // npc_reply가 비어있으면 fallback
+    if (!parsed.npc_reply || parsed.npc_reply.trim() === "") {
+      parsed.npc_reply = "すみません、もう一度お願いします。";
     }
 
     return NextResponse.json(parsed);

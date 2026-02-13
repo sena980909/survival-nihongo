@@ -79,9 +79,8 @@ export default function ChatRoom() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           stageId: stage.id,
-          messages: [
-            { role: "user", content: "（韓国人旅行客が目の前に現れました。NPCとして最初の一言を言ってください。）" },
-          ],
+          messages: [],
+          isInitial: true,
         }),
       });
 
