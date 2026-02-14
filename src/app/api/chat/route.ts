@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
-import { stages } from "@/data/stages";
+import { scenarios } from "@/data/scenarios";
 
 function getOpenAI() {
   return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -13,86 +13,117 @@ JSONの前後にマークダウンのコードブロック記号は絶対に含�
 {
   "npc_reply": "（日本語でNPCとしての返答。必ず何か言ってください）",
   "npc_reply_ko": "（npc_replyの韓国語翻訳）",
+  "npc_reply_pronunciation": "（npc_replyの韓国語発音表記。例：スミマセン→스미마셍）",
   "npc_emotion": "neutral",
   "choices": [
     {
       "text": "（日本語の選択肢1 - 最も適切な回答）",
       "text_ko": "（韓国語翻訳）",
-      "is_best": true
+      "text_pronunciation": "（韓国語発音表記）",
+      "quality": "best"
     },
     {
       "text": "（日本語の選択肢2 - まあまあの回答）",
       "text_ko": "（韓国語翻訳）",
-      "is_best": false
+      "text_pronunciation": "（韓国語発音表記）",
+      "quality": "acceptable"
     },
     {
       "text": "（日本語の選択肢3 - 不適切な回答）",
       "text_ko": "（韓国語翻訳）",
-      "is_best": false
+      "text_pronunciation": "（韓国語発音表記）",
+      "quality": "poor"
     }
   ],
-  "mission_status": "ongoing"
+  "conversation_status": "ongoing"
 }
 
 【重要ルール】
 - npc_reply: NPCのセリフ（日本語）。必ず入れること。
 - npc_reply_ko: NPCのセリフの韓国語翻訳。
-- npc_emotion: "neutral", "angry", "happy", "confused" のいずれか。
+- npc_reply_pronunciation: NPCのセリフの韓国語発音表記（カタカナではなく韓国語で。例：ありがとうございます→아리가또고자이마스）。
+- npc_emotion: "neutral", "happy", "confused", "encouraging" のいずれか。
 - choices: 必ず3つの選択肢を提供。ユーザーが次に言うべきセリフの候補。
-  - 1つは最も適切（is_best: true）、残りは不適切または微妙な回答。
-  - 選択肢の順番はランダムにすること（正解を常に最初にしない）。
-  - 各選択肢に日本語(text)と韓国語翻訳(text_ko)を含める。
-- mission_status: "ongoing", "success", "fail" のいずれか。
+  - quality は "best", "acceptable", "poor" のいずれか。
+  - 選択肢の順番は毎回ランダムにすること（bestを常に最初にしない）。
+  - 各選択肢に日本語(text)、韓国語翻訳(text_ko)、韓国語発音(text_pronunciation)を含める。
+- conversation_status: "ongoing" または "completed"（会話の目標を全て達成した場合）。
 `;
 
 const EVALUATE_FORMAT_INSTRUCTION = `
-ユーザーが選択肢を選びました。その選択に対して評価し、会話を続けてください。
+ユーザーが選択肢を選びました。その選択に対して教育的フィードバックを提供し、会話を続けてください。
 必ず以下のJSON形式のみで応答してください。
 
 {
   "npc_reply": "（選択に対するNPCの日本語返答）",
   "npc_reply_ko": "（npc_replyの韓国語翻訳）",
+  "npc_reply_pronunciation": "（npc_replyの韓国語発音表記）",
   "npc_emotion": "neutral",
-  "damage": 0,
-  "feedback": "（韓国語でフィードバック。なぜこの表現が良い/悪いか説明）",
+  "correction": {
+    "was_correct": true,
+    "explanation": "（韓国語で説明。選んだ表現がなぜ適切/不適切か）",
+    "better_expression": "（より自然な日本語表現。was_correctがfalseの場合）",
+    "better_expression_ko": "（better_expressionの韓国語翻訳）",
+    "better_expression_pronunciation": "（better_expressionの韓国語発音表記）",
+    "grammar_point": "（学んだ文法ポイントを韓国語で簡潔に説明）"
+  },
+  "kanji_note": null,
   "choices": [
     {
       "text": "（次の選択肢1）",
       "text_ko": "（韓国語翻訳）",
-      "is_best": true
+      "text_pronunciation": "（韓国語発音表記）",
+      "quality": "best"
     },
     {
       "text": "（次の選択肢2）",
       "text_ko": "（韓国語翻訳）",
-      "is_best": false
+      "text_pronunciation": "（韓国語発音表記）",
+      "quality": "acceptable"
     },
     {
       "text": "（次の選択肢3）",
       "text_ko": "（韓国語翻訳）",
-      "is_best": false
+      "text_pronunciation": "（韓国語発音表記）",
+      "quality": "poor"
     }
   ],
-  "mission_status": "ongoing"
+  "conversation_status": "ongoing"
 }
 
-【ダメージ基準】
-- 最も適切な選択肢を選んだ場合: 0
-- まあまあの選択肢を選んだ場合: 5-10
-- 不適切な選択肢を選んだ場合: 15-25
+【フィードバック基準】
+- best を選んだ場合: was_correct: true, 褒めて文法ポイントを説明。better_expressionは不要。
+- acceptable を選んだ場合: was_correct: true だが、より自然な表現を better_expression で紹介。
+- poor を選んだ場合: was_correct: false, なぜ不適切か優しく説明し、正しい表現を示す。
+
+【漢字ノート】
+- 会話の中で漢字が重要な役割を果たす場面では、kanji_note を含める：
+  {
+    "kanji": "漢字",
+    "reading": "ひらがな読み",
+    "pronunciation": "韓国語発音（例：でぐち→데구치）",
+    "meaning": "韓国語の意味",
+    "explanation": "漢字の成り立ちや覚え方を韓国語で説明"
+  }
+- 漢字が関連しない場面では kanji_note: null
 
 【重要】
-- mission_status は会話の流れに応じて判断。ミッション目標を達成したら "success"。
+- conversation_status は会話の流れに応じて判断。目標を全て達成したら "completed"。失敗はない。
 - 選択肢の順番はランダムにすること。
-- feedback は韓国語で、選んだ表現がなぜ良い/悪いかを説明すること。
+- correction.explanation は韓国語で、選んだ表現がなぜ良い/悪いかを優しく説明すること。
 `;
 
 export async function POST(request: NextRequest) {
   try {
-    const { stageId, messages, useHint, isInitial } = await request.json();
+    const { scenarioId, messages, requestHelp, isInitial } =
+      await request.json();
 
-    const stage = stages.find((s) => s.id === stageId);
-    if (!stage) {
-      return NextResponse.json({ error: "Stage not found" }, { status: 404 });
+    const scenario = scenarios.find((s) => s.id === scenarioId);
+    if (!scenario) {
+      return NextResponse.json(
+        { error: "Scenario not found" },
+        { status: 404 }
+      );
     }
 
     const chatMessages: OpenAI.ChatCompletionMessageParam[] = [];
@@ -100,7 +131,7 @@ export async function POST(request: NextRequest) {
     if (isInitial) {
       chatMessages.push({
         role: "system",
-        content: `${stage.systemPrompt}\n\n${RESPONSE_FORMAT_INSTRUCTION}`,
+        content: `${scenario.systemPrompt}\n\n${RESPONSE_FORMAT_INSTRUCTION}`,
       });
       chatMessages.push({
         role: "user",
@@ -110,7 +141,7 @@ export async function POST(request: NextRequest) {
     } else {
       chatMessages.push({
         role: "system",
-        content: `${stage.systemPrompt}\n\n${EVALUATE_FORMAT_INSTRUCTION}`,
+        content: `${scenario.systemPrompt}\n\n${EVALUATE_FORMAT_INSTRUCTION}`,
       });
       chatMessages.push(
         ...messages.map((msg: { role: string; content: string }) => ({
@@ -120,11 +151,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (useHint) {
+    if (requestHelp) {
       chatMessages.push({
         role: "user",
         content:
-          "【システム】ヒント使用。選択肢のうちどれが最適かを feedback で韓国語で詳しく説明してください。damage は 0 にしてください。",
+          "【システム】ユーザーがヘルプを求めています。各選択肢の意味、ニュアンス、使用場面の違いを韓国語で丁寧に説明してください。どれが正解かは直接言わず、ユーザー自身が判断できるようにヒントを出してください。韓国語発音表記も含めてください。",
       });
     }
 
@@ -132,7 +163,7 @@ export async function POST(request: NextRequest) {
       model: "gpt-4o-mini",
       messages: chatMessages,
       temperature: 0.8,
-      max_tokens: 800,
+      max_tokens: 1200,
     });
 
     const responseText = completion.choices[0].message.content || "";
@@ -149,15 +180,31 @@ export async function POST(request: NextRequest) {
       parsed = {
         npc_reply: "すみません、もう一度お願いします。",
         npc_reply_ko: "죄송합니다, 다시 한번 부탁드립니다.",
+        npc_reply_pronunciation: "스미마셍, 모-이치도 오네가이시마스",
         npc_emotion: "confused",
-        damage: 0,
-        feedback: "",
+        correction: null,
+        kanji_note: null,
         choices: [
-          { text: "はい、わかりました。", text_ko: "네, 알겠습니다.", is_best: true },
-          { text: "えっと...", text_ko: "음...", is_best: false },
-          { text: "何ですか？", text_ko: "뭐요?", is_best: false },
+          {
+            text: "はい、わかりました。",
+            text_ko: "네, 알겠습니다.",
+            text_pronunciation: "하이, 와카리마시타",
+            quality: "best",
+          },
+          {
+            text: "えっと...",
+            text_ko: "음...",
+            text_pronunciation: "엣또...",
+            quality: "acceptable",
+          },
+          {
+            text: "何ですか？",
+            text_ko: "뭐요?",
+            text_pronunciation: "난데스카?",
+            quality: "poor",
+          },
         ],
-        mission_status: "ongoing",
+        conversation_status: "ongoing",
       };
     }
 
@@ -165,14 +212,34 @@ export async function POST(request: NextRequest) {
     if (!parsed.npc_reply || parsed.npc_reply.trim() === "") {
       parsed.npc_reply = "すみません、もう一度お願いします。";
       parsed.npc_reply_ko = "죄송합니다, 다시 한번 부탁드립니다.";
+      parsed.npc_reply_pronunciation = "스미마셍, 모-이치도 오네가이시마스";
     }
 
     // choices가 없거나 비어있으면 기본값
-    if (!parsed.choices || !Array.isArray(parsed.choices) || parsed.choices.length === 0) {
+    if (
+      !parsed.choices ||
+      !Array.isArray(parsed.choices) ||
+      parsed.choices.length === 0
+    ) {
       parsed.choices = [
-        { text: "はい。", text_ko: "네.", is_best: true },
-        { text: "いいえ。", text_ko: "아니요.", is_best: false },
-        { text: "もう一度お願いします。", text_ko: "다시 한번 부탁합니다.", is_best: false },
+        {
+          text: "はい。",
+          text_ko: "네.",
+          text_pronunciation: "하이",
+          quality: "best",
+        },
+        {
+          text: "いいえ。",
+          text_ko: "아니요.",
+          text_pronunciation: "이-에",
+          quality: "acceptable",
+        },
+        {
+          text: "もう一度お願いします。",
+          text_ko: "다시 한번 부탁합니다.",
+          text_pronunciation: "모-이치도 오네가이시마스",
+          quality: "poor",
+        },
       ];
     }
 

@@ -10,8 +10,8 @@
 }
 
 body {
-  background: #030712;
-  color: #ededed;
+  background: #f9fafb;
+  color: #111827;
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
   margin: 0;
   padding: 0;
@@ -28,7 +28,7 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #374151;
+  background: #d1d5db;
   border-radius: 4px;
 }
 
