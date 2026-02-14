@@ -49,7 +49,10 @@ export interface ScenarioProgress {
 interface LearningState {
   // 네비게이션
   currentScenarioId: string | null;
-  currentView: "scenarios" | "conversation" | "review" | "bookmarks";
+  currentView: "scenarios" | "conversation" | "review" | "bookmarks" | "onboarding" | "quiz" | "stats";
+
+  // 온보딩
+  hasSeenOnboarding: boolean;
 
   // 채팅
   messages: ChatMessage[];
@@ -71,6 +74,9 @@ interface LearningState {
   goToScenarioList: () => void;
   goToBookmarks: () => void;
   goToReview: () => void;
+  goToQuiz: () => void;
+  goToStats: () => void;
+  completeOnboarding: () => void;
   resetConversation: () => void;
   setLoading: (loading: boolean) => void;
 }
@@ -80,6 +86,7 @@ export const useLearningStore = create<LearningState>()(
     (set, get) => ({
       currentScenarioId: null,
       currentView: "scenarios" as const,
+      hasSeenOnboarding: false,
       messages: [],
       isLoading: false,
       isConversationComplete: false,
@@ -162,6 +169,15 @@ export const useLearningStore = create<LearningState>()(
       goToReview: () =>
         set({ currentView: "review" }),
 
+      goToQuiz: () =>
+        set({ currentView: "quiz" }),
+
+      goToStats: () =>
+        set({ currentView: "stats" }),
+
+      completeOnboarding: () =>
+        set({ hasSeenOnboarding: true, currentView: "scenarios" }),
+
       resetConversation: () =>
         set({
           messages: [],
@@ -177,6 +193,7 @@ export const useLearningStore = create<LearningState>()(
         bookmarkedExpressions: state.bookmarkedExpressions,
         learnedKanji: state.learnedKanji,
         totalConversations: state.totalConversations,
+        hasSeenOnboarding: state.hasSeenOnboarding,
       }),
     }
   )

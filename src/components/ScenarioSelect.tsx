@@ -21,7 +21,7 @@ const ALL_CATEGORIES: ("all" | ScenarioCategory)[] = [
 ];
 
 export default function ScenarioSelect() {
-  const { selectScenario, completedScenarios, goToBookmarks, totalConversations } =
+  const { selectScenario, completedScenarios, goToBookmarks, goToQuiz, goToStats, totalConversations } =
     useLearningStore();
   const [selectedCategory, setSelectedCategory] = useState<
     "all" | ScenarioCategory
@@ -64,12 +64,26 @@ export default function ScenarioSelect() {
             <h1 className="text-2xl font-bold text-gray-900">
               일본어 회화 연습
             </h1>
-            <button
-              onClick={goToBookmarks}
-              className="text-sm text-indigo-600 hover:text-indigo-700 font-medium transition"
-            >
-              ⭐ 북마크
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={goToQuiz}
+                className="text-sm text-indigo-600 hover:text-indigo-700 font-medium transition"
+              >
+                📝 퀴즈
+              </button>
+              <button
+                onClick={goToStats}
+                className="text-sm text-indigo-600 hover:text-indigo-700 font-medium transition"
+              >
+                📊 통계
+              </button>
+              <button
+                onClick={goToBookmarks}
+                className="text-sm text-indigo-600 hover:text-indigo-700 font-medium transition"
+              >
+                ⭐ 북마크
+              </button>
+            </div>
           </div>
           <p className="text-sm text-gray-500">
             실전 상황별 일본어 회화를 연습해보세요

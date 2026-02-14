@@ -511,6 +511,91 @@ export const scenarios: Scenario[] = [
 - 切符を購入し、出発ホームを確認したら conversation_status: "completed"`,
   },
 
+  {
+    id: "ic-card",
+    category: "transport",
+    name: "IC카드 충전",
+    nameJa: "ICカードチャージ",
+    description:
+      "IC카드(Suica/PASMO) 잔액이 부족합니다. 역의 충전기에서 충전하거나 역무원에게 도움을 요청해봅시다.",
+    emoji: "💳",
+    npcName: "역무원",
+    npcRole: "駅員",
+    learningObjectives: [
+      "IC카드 충전 요청하기",
+      "잔액 확인 표현",
+      "금액 말하기",
+    ],
+    keyExpressions: [
+      {
+        japanese: "チャージしたいのですが",
+        reading: "チャージしたいのですが",
+        korean: "충전하고 싶은데요",
+        koreanPronunciation: "차-지시타이노데스가",
+        usage: "충전을 요청할 때",
+      },
+      {
+        japanese: "残高が足りません",
+        reading: "ざんだかがたりません",
+        korean: "잔액이 부족합니다",
+        koreanPronunciation: "잔다카가 타리마셍",
+        usage: "잔액 부족을 말할 때",
+      },
+      {
+        japanese: "千円お願いします",
+        reading: "せんえんおねがいします",
+        korean: "천 엔 부탁합니다",
+        koreanPronunciation: "셍엥 오네가이시마스",
+        usage: "충전 금액을 말할 때",
+      },
+    ],
+    kanjiList: [
+      {
+        kanji: "残高",
+        reading: "ざんだか",
+        koreanPronunciation: "잔다카",
+        meaning: "잔액",
+        context: "카드에 남아있는 금액",
+      },
+      {
+        kanji: "千円",
+        reading: "せんえん",
+        koreanPronunciation: "셍엥",
+        meaning: "천 엔",
+        context: "일본 화폐 단위",
+      },
+      {
+        kanji: "精算",
+        reading: "せいさん",
+        koreanPronunciation: "세-상",
+        meaning: "정산",
+        context: "부족한 요금을 정산하는 것",
+      },
+    ],
+    estimatedMinutes: 5,
+    systemPrompt: `あなたは駅員です。以下のルールを厳守してください：
+
+【ペルソナ】
+- 丁寧で親切な駅員
+- 外国人にもわかりやすく説明する
+- ICカードの使い方を優しく教える
+
+【会話の流れ】
+1. 「どうされましたか？」から始める
+2. ICカードの問題を確認する
+3. チャージ方法を案内する
+4. 金額を確認する
+5. チャージ完了を伝える
+
+【学習ポイント】
+- チャージ関連の表現
+- 金額の言い方
+- 駅で使える基本表現
+
+【完了条件】
+- チャージが完了したら conversation_status: "completed"`,
+  },
+
   // ===== 음식 =====
   {
     id: "convenience-store",
@@ -1060,6 +1145,160 @@ export const scenarios: Scenario[] = [
 
 【完了条件】
 - 観光案内を受けて、写真撮影も依頼できたら conversation_status: "completed"`,
+  },
+
+  {
+    id: "find-restroom",
+    category: "daily",
+    name: "화장실 찾기",
+    nameJa: "トイレを探す",
+    description:
+      "급하게 화장실을 찾아야 합니다. 근처 사람이나 가게 직원에게 화장실 위치를 물어봅시다.",
+    emoji: "🚻",
+    npcName: "편의점 직원",
+    npcRole: "コンビニの店員",
+    learningObjectives: [
+      "화장실 위치 묻기",
+      "정중한 부탁 표현",
+      "감사 인사하기",
+    ],
+    keyExpressions: [
+      {
+        japanese: "お手洗いはどこですか",
+        reading: "おてあらいはどこですか",
+        korean: "화장실은 어디인가요?",
+        koreanPronunciation: "오테아라이와 도코데스카",
+        usage: "화장실 위치를 물을 때",
+      },
+      {
+        japanese: "トイレを借りてもいいですか",
+        reading: "トイレをかりてもいいですか",
+        korean: "화장실을 빌려도 될까요?",
+        koreanPronunciation: "토이레오 카리테모 이-데스카",
+        usage: "가게 화장실 사용 허락을 구할 때",
+      },
+      {
+        japanese: "近くにトイレはありますか",
+        reading: "ちかくにトイレはありますか",
+        korean: "근처에 화장실이 있나요?",
+        koreanPronunciation: "치카쿠니 토이레와 아리마스카",
+        usage: "근처 화장실을 찾을 때",
+      },
+    ],
+    kanjiList: [
+      {
+        kanji: "手洗",
+        reading: "てあらい",
+        koreanPronunciation: "테아라이",
+        meaning: "화장실 (정중한 표현)",
+        context: "お手洗い는 화장실의 정중한 표현",
+      },
+      {
+        kanji: "近く",
+        reading: "ちかく",
+        koreanPronunciation: "치카쿠",
+        meaning: "근처",
+        context: "가까운 장소를 나타낼 때",
+      },
+    ],
+    estimatedMinutes: 4,
+    systemPrompt: `あなたはコンビニの店員です。以下のルールを厳守してください：
+
+【ペルソナ】
+- 親切なコンビニ店員
+- 外国人にもわかりやすく対応
+- トイレの場所を丁寧に案内
+
+【会話の流れ】
+1. 「いらっしゃいませ」から始める
+2. トイレの場所を聞かれる
+3. トイレの場所を案内する
+4. 使い方の注意事項を伝える
+
+【学習ポイント】
+- お手洗い/トイレの使い分け
+- 場所を聞く表現
+- 許可を求める表現
+
+【完了条件】
+- トイレの場所を確認できたら conversation_status: "completed"`,
+  },
+  {
+    id: "wifi-connect",
+    category: "daily",
+    name: "와이파이 연결",
+    nameJa: "Wi-Fi接続",
+    description:
+      "카페에서 와이파이에 연결하고 싶습니다. 직원에게 와이파이 비밀번호를 물어봅시다.",
+    emoji: "📶",
+    npcName: "카페 직원",
+    npcRole: "カフェの店員",
+    learningObjectives: [
+      "와이파이 사용 요청하기",
+      "비밀번호 묻기",
+      "연결 문제 도움 요청",
+    ],
+    keyExpressions: [
+      {
+        japanese: "Wi-Fiはありますか",
+        reading: "ワイファイはありますか",
+        korean: "와이파이 있나요?",
+        koreanPronunciation: "와이파이와 아리마스카",
+        usage: "와이파이 유무를 물을 때",
+      },
+      {
+        japanese: "パスワードを教えてください",
+        reading: "パスワードをおしえてください",
+        korean: "비밀번호를 알려주세요",
+        koreanPronunciation: "파스와-도오 오시에테쿠다사이",
+        usage: "비밀번호를 물을 때",
+      },
+      {
+        japanese: "接続できません",
+        reading: "せつぞくできません",
+        korean: "연결이 안 됩니다",
+        koreanPronunciation: "세츠조쿠데키마셍",
+        usage: "연결 문제가 있을 때",
+      },
+    ],
+    kanjiList: [
+      {
+        kanji: "接続",
+        reading: "せつぞく",
+        koreanPronunciation: "세츠조쿠",
+        meaning: "연결/접속",
+        context: "인터넷이나 기기를 연결하는 것",
+      },
+      {
+        kanji: "無料",
+        reading: "むりょう",
+        koreanPronunciation: "무료-",
+        meaning: "무료",
+        context: "돈을 내지 않아도 되는 것",
+      },
+    ],
+    estimatedMinutes: 4,
+    systemPrompt: `あなたはカフェの店員です。以下のルールを厳守してください：
+
+【ペルソナ】
+- 若くて親切なカフェ店員
+- 外国人にも丁寧に対応
+- Wi-Fiの使い方を分かりやすく教える
+
+【会話の流れ】
+1. 「いらっしゃいませ」から始める
+2. Wi-Fiの有無を聞かれる
+3. パスワードを伝える
+4. 接続方法を案内する
+5. 制限時間があれば伝える
+
+【学習ポイント】
+- Wi-Fi関連の表現
+- パスワードの聞き方
+- トラブル時の表現
+
+【完了条件】
+- Wi-Fiに接続できたら conversation_status: "completed"`,
   },
 
   // ===== 긴급 =====
