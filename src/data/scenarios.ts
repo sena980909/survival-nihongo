@@ -1159,4 +1159,96 @@ export const scenarios: Scenario[] = [
 【完了条件】
 - 症状を伝え、薬を選び、服用方法を確認したら conversation_status: "completed"`,
   },
+  // ===== 교통 (추가) =====
+  {
+    id: "narita-skyliner",
+    category: "transport",
+    name: "나리타→우에노 (스카이라이너)",
+    nameJa: "成田空港→上野（スカイライナー）",
+    description:
+      "나리타 공항에서 우에노까지 스카이라이너 또는 버스 표를 현장에서 구매해봅시다.",
+    emoji: "🚄",
+    npcName: "매표소 직원",
+    npcRole: "京成電鉄のチケットカウンター職員",
+    learningObjectives: [
+      "교통편 표 현장 구매하기",
+      "목적지와 좌석 요청하기",
+      "출발 시간 확인하기",
+    ],
+    keyExpressions: [
+      {
+        japanese: "上野までのスカイライナーをお願いします",
+        reading: "うえのまでのスカイライナーをおねがいします",
+        korean: "우에노까지 스카이라이너 부탁합니다",
+        koreanPronunciation: "우에노마데노 스카이라이나-오 오네가이시마스",
+        usage: "스카이라이너 표를 구매할 때",
+      },
+      {
+        japanese: "次の便は何時ですか",
+        reading: "つぎのびんはなんじですか",
+        korean: "다음 편은 몇 시인가요",
+        koreanPronunciation: "츠기노 빙와 난지데스카",
+        usage: "출발 시간을 물어볼 때",
+      },
+      {
+        japanese: "バスと電車、どちらが早いですか",
+        reading: "バスとでんしゃ、どちらがはやいですか",
+        korean: "버스와 전철, 어느 쪽이 빠른가요",
+        koreanPronunciation: "바스토 덴샤, 도치라가 하야이데스카",
+        usage: "교통수단을 비교할 때",
+      },
+    ],
+    kanjiList: [
+      {
+        kanji: "空港",
+        reading: "くうこう",
+        koreanPronunciation: "쿠-코-",
+        meaning: "공항",
+        context: "飛行機が発着する場所",
+      },
+      {
+        kanji: "片道",
+        reading: "かたみち",
+        koreanPronunciation: "카타미치",
+        meaning: "편도",
+        context: "行きだけの切符",
+      },
+      {
+        kanji: "指定席",
+        reading: "していせき",
+        koreanPronunciation: "시테-세키",
+        meaning: "지정석",
+        context: "座席が決まっている切符",
+      },
+    ],
+    estimatedMinutes: 5,
+    systemPrompt: `あなたは成田空港の京成電鉄チケットカウンターの職員です。
+名前：山田（やまだ）
+性格：親切で効率的。外国人旅行者の対応に慣れている。
+
+【シナリオ設定】
+成田空港第1ターミナルの京成線チケットカウンター。
+ユーザー（韓国人旅行者）が上野方面の切符を買いに来た。
+
+【会話の流れ】
+1. 「いらっしゃいませ」から始める
+2. 行き先と交通手段（スカイライナー/アクセス特急/バス）を確認
+3. 片道・往復、枚数を確認
+4. 出発時間とホームの案内
+5. 支払い
+
+【教育ガイダンス】
+- bestを選んだ場合: スムーズに対応。feedbackで交通関連の表現を説明
+- acceptableを選んだ場合: 理解して対応。より正確な表現を紹介
+- poorを選んだ場合: 優しく聞き返す。正しい伝え方を説明
+
+【学習ポイント】
+- 〇〇までお願いします（目的地の指定）
+- 片道/往復の選択
+- 出発時間の確認
+- 支払い方法の指定
+
+【完了条件】
+- 切符を購入し、出発ホームを確認したら conversation_status: "completed"`,
+  },
 ];

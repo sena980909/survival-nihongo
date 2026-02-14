@@ -2560,6 +2560,266 @@ const pharmacy: ConversationFlow = [
   },
 ];
 
+// ===== 나리타→우에노 스카이라이너 =====
+const naritaSkyliner: ConversationFlow = [
+  {
+    id: "sky-1",
+    npcMessage: "いらっしゃいませ。京成線のチケットカウンターです。どちらまで行かれますか？",
+    npcMessageKo: "어서 오세요. 케이세이선 티켓 카운터입니다. 어디까지 가시나요?",
+    npcMessagePronunciation: "이랏샤이마세. 케-세-센노 치켓또카운타-데스. 도치라마데 이카레마스카?",
+    npcEmotion: "happy",
+    choices: [
+      {
+        text: "上野までお願いします。スカイライナーに乗りたいのですが。",
+        textKo: "우에노까지 부탁합니다. 스카이라이너를 타고 싶은데요.",
+        textPronunciation: "우에노마데 오네가이시마스. 스카이라이나-니 노리타이노데스가.",
+        quality: "best",
+        correction: {
+          wasCorrect: true,
+          explanation: "완벽해요! 목적지와 원하는 교통수단을 한번에 명확히 전달했어요.",
+          grammarPoint: "'〜に乗りたいのですが'는 '〜를 타고 싶은데요'라는 정중한 희망 표현이에요.",
+        },
+      },
+      {
+        text: "上野まで行きたいです。",
+        textKo: "우에노까지 가고 싶습니다.",
+        textPronunciation: "우에노마데 이키타이데스",
+        quality: "acceptable",
+        correction: {
+          wasCorrect: true,
+          explanation: "목적지를 잘 전달했어요! 교통수단(스카이라이너/버스)도 말하면 더 효율적이에요.",
+          betterExpression: "上野までスカイライナーをお願いします。",
+          betterExpressionKo: "우에노까지 스카이라이너 부탁합니다.",
+          betterExpressionPronunciation: "우에노마데 스카이라이나-오 오네가이시마스",
+          grammarPoint: "스카이라이너는 나리타→우에노 약 41분. 가장 빠른 교통수단이에요!",
+        },
+      },
+      {
+        text: "東京に行きたい。",
+        textKo: "도쿄에 가고 싶어.",
+        textPronunciation: "토-쿄-니 이키타이",
+        quality: "poor",
+        correction: {
+          wasCorrect: false,
+          explanation: "반말이고, '東京'은 너무 넓어요. 구체적인 역(上野, 日暮里 등)을 말해야 해요.",
+          betterExpression: "上野までお願いします。",
+          betterExpressionKo: "우에노까지 부탁합니다.",
+          betterExpressionPronunciation: "우에노마데 오네가이시마스",
+          grammarPoint: "스카이라이너 정차역: 成田空港→空港第2ビル→日暮里(닛포리)→上野(우에노)",
+        },
+      },
+    ],
+    kanjiNote: {
+      kanji: "空港",
+      reading: "くうこう",
+      pronunciation: "쿠-코-",
+      meaning: "공항",
+      explanation: "空(하늘 공) + 港(항구 항) — 하늘의 항구, 비행기가 뜨고 내리는 곳",
+    },
+  },
+  {
+    id: "sky-2",
+    npcMessage: "上野までのスカイライナーですね。次の便は14時20分発です。片道でよろしいですか？",
+    npcMessageKo: "우에노까지 스카이라이너요. 다음 편은 14시 20분 출발입니다. 편도로 괜찮으세요?",
+    npcMessagePronunciation: "우에노마데노 스카이라이나-데스네. 츠기노 빙와 쥬-요지 니쥿풍하츠데스. 카타미치데 요로시-데스카?",
+    npcEmotion: "neutral",
+    choices: [
+      {
+        text: "はい、片道一枚お願いします。",
+        textKo: "네, 편도 1장 부탁합니다.",
+        textPronunciation: "하이, 카타미치 이치마이 오네가이시마스",
+        quality: "best",
+        correction: {
+          wasCorrect: true,
+          explanation: "완벽해요! 편도/왕복과 매수를 명확하게 전달했어요.",
+          grammarPoint: "표 매수: 一枚(이치마이/1장), 二枚(니마이/2장). 편도(片道) vs 왕복(往復).",
+        },
+      },
+      {
+        text: "片道でお願いします。",
+        textKo: "편도로 부탁합니다.",
+        textPronunciation: "카타미치데 오네가이시마스",
+        quality: "acceptable",
+        correction: {
+          wasCorrect: true,
+          explanation: "좋아요! 매수(1장)도 함께 말하면 더 정확해요.",
+          betterExpression: "片道一枚お願いします。",
+          betterExpressionKo: "편도 1장 부탁합니다.",
+          betterExpressionPronunciation: "카타미치 이치마이 오네가이시마스",
+          grammarPoint: "스카이라이너 편도 요금: 약 2,520엔 (2024년 기준). 전석 지정석이에요!",
+        },
+      },
+      {
+        text: "いくら？",
+        textKo: "얼마?",
+        textPronunciation: "이쿠라?",
+        quality: "poor",
+        correction: {
+          wasCorrect: false,
+          explanation: "반말이에요! 'おいくらですか？'가 정중한 표현이에요.",
+          betterExpression: "おいくらですか？片道一枚お願いします。",
+          betterExpressionKo: "얼마인가요? 편도 1장 부탁합니다.",
+          betterExpressionPronunciation: "오이쿠라데스카? 카타미치 이치마이 오네가이시마스",
+          grammarPoint: "'いくら'는 반말, 'おいくらですか'는 존댓말이에요. 'お'를 붙이면 정중!",
+        },
+      },
+    ],
+    kanjiNote: {
+      kanji: "片道",
+      reading: "かたみち",
+      pronunciation: "카타미치",
+      meaning: "편도",
+      explanation: "片(조각 편) + 道(길 도) — 길의 한쪽, 갈 때만의 표",
+    },
+  },
+  {
+    id: "sky-3",
+    npcMessage: "かしこまりました。片道一枚、2,520円になります。お支払いはどうなさいますか？",
+    npcMessageKo: "알겠습니다. 편도 1장, 2,520엔입니다. 결제는 어떻게 하시겠어요?",
+    npcMessagePronunciation: "카시코마리마시타. 카타미치 이치마이, 니센고햐쿠니쥬-엥니 나리마스. 오시하라이와 도-나사이마스카?",
+    npcEmotion: "neutral",
+    choices: [
+      {
+        text: "カードでお願いします。",
+        textKo: "카드로 부탁합니다.",
+        textPronunciation: "카-도데 오네가이시마스",
+        quality: "best",
+        correction: {
+          wasCorrect: true,
+          explanation: "완벽해요! 결제 수단을 간결하게 전달했어요.",
+          grammarPoint: "결제 방법: カード(카드), 現金(겡킹/현금), 交通系IC(코-츠-케-IC/교통카드), QR決済(QR켓사이/QR결제)",
+        },
+      },
+      {
+        text: "Suicaで払えますか？",
+        textKo: "스이카로 결제할 수 있나요?",
+        textPronunciation: "스이카데 하라에마스카?",
+        quality: "acceptable",
+        correction: {
+          wasCorrect: true,
+          explanation: "좋은 질문이에요! 스카이라이너 카운터에서는 IC카드는 안 될 수도 있어요.",
+          betterExpression: "カードでお願いします。",
+          betterExpressionKo: "카드로 부탁합니다.",
+          betterExpressionPronunciation: "카-도데 오네가이시마스",
+          grammarPoint: "'払える(하라에루)'는 '지불할 수 있다'. '払えますか'는 '결제 가능한가요?'",
+        },
+      },
+      {
+        text: "高い！もっと安いのないの？",
+        textKo: "비싸! 더 싼 거 없어?",
+        textPronunciation: "타카이! 못또 야스이노 나이노?",
+        quality: "poor",
+        correction: {
+          wasCorrect: false,
+          explanation: "반말이에요! 가격이 부담되면 정중하게 다른 옵션을 물어볼 수 있어요.",
+          betterExpression: "もう少し安い方法はありますか？",
+          betterExpressionKo: "조금 더 저렴한 방법은 있나요?",
+          betterExpressionPronunciation: "모-스코시 야스이 호-호-와 아리마스카?",
+          grammarPoint: "저렴한 대안: アクセス特急(악세스 토큐-/약 1,270엔), 리무진 버스(약 1,300엔)",
+        },
+      },
+    ],
+  },
+  {
+    id: "sky-4",
+    npcMessage: "はい、カードですね。... はい、こちらがチケットです。座席は3号車12番Aです。",
+    npcMessageKo: "네, 카드요. ... 네, 여기 티켓입니다. 좌석은 3호차 12번 A입니다.",
+    npcMessagePronunciation: "하이, 카-도데스네. ... 하이, 코치라가 치켓또데스. 자세키와 상고-샤 쥬-니방 에-데스.",
+    npcEmotion: "happy",
+    choices: [
+      {
+        text: "ありがとうございます。ホームは何番ですか？",
+        textKo: "감사합니다. 플랫폼은 몇 번인가요?",
+        textPronunciation: "아리가또고자이마스. 호-무와 남방데스카?",
+        quality: "best",
+        correction: {
+          wasCorrect: true,
+          explanation: "완벽해요! 티켓 받고 플랫폼을 확인하는 건 아주 실용적인 질문이에요.",
+          grammarPoint: "'何番(남방)'은 '몇 번'. 'ホーム(호-무)'는 플랫폼의 일본식 표현이에요.",
+        },
+      },
+      {
+        text: "ありがとうございます。乗り場はどこですか？",
+        textKo: "감사합니다. 타는 곳은 어디인가요?",
+        textPronunciation: "아리가또고자이마스. 노리바와 도코데스카?",
+        quality: "acceptable",
+        correction: {
+          wasCorrect: true,
+          explanation: "좋아요! '乗り場(노리바)'는 '타는 곳'으로 자연스러운 표현이에요.",
+          grammarPoint: "'乗り場(노리바)'는 '타는 곳/승강장'. 역에서 자주 보는 표시에요.",
+        },
+      },
+      {
+        text: "OK。",
+        textKo: "오케이.",
+        textPronunciation: "오-케-",
+        quality: "poor",
+        correction: {
+          wasCorrect: false,
+          explanation: "'OK'만으로는 아쉬워요. 감사 인사와 플랫폼 확인을 꼭 하세요!",
+          betterExpression: "ありがとうございます。ホームは何番ですか？",
+          betterExpressionKo: "감사합니다. 플랫폼은 몇 번인가요?",
+          betterExpressionPronunciation: "아리가또고자이마스. 호-무와 남방데스카?",
+          grammarPoint: "표를 산 후에는 반드시 플랫폼, 출발시간, 좌석을 확인하세요!",
+        },
+      },
+    ],
+    kanjiNote: {
+      kanji: "指定席",
+      reading: "していせき",
+      pronunciation: "시테-세키",
+      meaning: "지정석",
+      explanation: "指(가리킬 지) + 定(정할 정) + 席(자리 석) — 좌석이 미리 정해진 표. 스카이라이너는 전석 지정석!",
+    },
+  },
+  {
+    id: "sky-5",
+    npcMessage: "1番ホームです。エスカレーターを降りて左側です。14時20分発ですので、お早めにどうぞ。よい旅を！",
+    npcMessageKo: "1번 플랫폼입니다. 에스컬레이터를 내려가서 왼쪽입니다. 14시 20분 출발이니 서둘러주세요. 좋은 여행 되세요!",
+    npcMessagePronunciation: "이치방호-무데스. 에스카레-타-오 오리테 히다리가와데스. 쥬-요지 니쥿풍하츠데스노데, 오하야메니 도-조. 요이 타비오!",
+    npcEmotion: "happy",
+    isLast: true,
+    choices: [
+      {
+        text: "ありがとうございます！助かりました。",
+        textKo: "감사합니다! 도움이 됐어요.",
+        textPronunciation: "아리가또고자이마스! 타스카리마시타.",
+        quality: "best",
+        correction: {
+          wasCorrect: true,
+          explanation: "완벽해요! '助かりました'는 실질적으로 도움을 받았을 때 쓰는 감사 표현이에요.",
+          grammarPoint: "'よい旅を(요이 타비오)'는 '좋은 여행을!'이라는 일본식 인사. 외국인에게 자주 해줘요.",
+        },
+      },
+      {
+        text: "ありがとうございます！",
+        textKo: "감사합니다!",
+        textPronunciation: "아리가또고자이마스!",
+        quality: "acceptable",
+        correction: {
+          wasCorrect: true,
+          explanation: "감사 인사 좋아요! 스카이라이너 즐기세요!",
+          grammarPoint: "스카이라이너 팁: 우에노까지 약 41분, 닛포리까지 약 36분. 짐은 좌석 뒤에 보관!",
+        },
+      },
+      {
+        text: "はい。",
+        textKo: "네.",
+        textPronunciation: "하이",
+        quality: "poor",
+        correction: {
+          wasCorrect: false,
+          explanation: "친절한 안내에는 감사를 표현하세요!",
+          betterExpression: "ありがとうございます！助かりました。",
+          betterExpressionKo: "감사합니다! 도움이 됐어요.",
+          betterExpressionPronunciation: "아리가또고자이마스! 타스카리마시타.",
+          grammarPoint: "에스컬레이터에서는 왼쪽에 서고 오른쪽으로 걸어가는 것이 도쿄 매너예요!",
+        },
+      },
+    ],
+  },
+];
+
 // 모든 대화 흐름을 시나리오 ID로 매핑
 export const conversationFlows: Record<string, ConversationFlow> = {
   "airport-immigration": airportImmigration,
@@ -2574,4 +2834,5 @@ export const conversationFlows: Record<string, ConversationFlow> = {
   "tourist-spot": touristSpot,
   "hospital": hospital,
   "pharmacy": pharmacy,
+  "narita-skyliner": naritaSkyliner,
 };
