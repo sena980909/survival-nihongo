@@ -615,9 +615,6 @@ export default function ConversationRoom() {
                     ({choice.text_pronunciation})
                   </p>
                 )}
-                <p className="text-gray-500 text-xs mt-0.5">
-                  {choice.text_ko}
-                </p>
               </motion.button>
             ))}
           </div>
