@@ -51,6 +51,8 @@ export default function ConversationRoom() {
   const [initialized, setInitialized] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [autoTts, setAutoTts] = useState(true);
+  const [ttsVolume, setTtsVolume] = useState(0.8);
+  const [showVolumeSlider, setShowVolumeSlider] = useState(false);
   const [showTranslation, setShowTranslation] = useState<string | null>(null);
   const [currentNodeIndex, setCurrentNodeIndex] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -114,6 +116,7 @@ export default function ConversationRoom() {
         .then((blob) => {
           const url = URL.createObjectURL(blob);
           const audio = new Audio(url);
+          audio.volume = ttsVolume;
           audioRef.current = audio;
 
           audio.onended = () => {
@@ -281,13 +284,13 @@ export default function ConversationRoom() {
 
     addMessage(correctionMsg);
 
-    if (autoTts) {
-      await playTts(correctionMsgId, nextNode.npcMessage);
-    }
-
     setCurrentNodeIndex(nextIndex);
     setChoices(shuffleChoices(nextNode.choices));
     setLoading(false);
+
+    if (autoTts) {
+      playTts(correctionMsgId, nextNode.npcMessage);
+    }
   };
 
   // 도움말 (로컬 — 각 선택지의 뉘앙스를 보여줌)
@@ -377,17 +380,40 @@ export default function ConversationRoom() {
               {scenario.nameJa}
             </span>
           </div>
-          <button
-            onClick={() => setAutoTts(!autoTts)}
-            className={`text-sm px-2 py-1 rounded-lg transition ${
-              autoTts
-                ? "bg-indigo-100 text-indigo-600"
-                : "bg-gray-100 text-gray-400"
-            }`}
-            title="자동 음성 재생"
-          >
-            {autoTts ? "🔊" : "🔇"}
-          </button>
+          <div className="relative flex items-center gap-1">
+            <button
+              onClick={() => setAutoTts(!autoTts)}
+              className={`text-sm px-2 py-1 rounded-lg transition ${
+                autoTts
+                  ? "bg-indigo-100 text-indigo-600"
+                  : "bg-gray-100 text-gray-400"
+              }`}
+              title="자동 음성 재생"
+            >
+              {autoTts ? "🔊" : "🔇"}
+            </button>
+            <button
+              onClick={() => setShowVolumeSlider(!showVolumeSlider)}
+              className="text-xs text-gray-400 hover:text-gray-600 px-1"
+              title="음량 조절"
+            >
+              ▾
+            </button>
+            {showVolumeSlider && (
+              <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg p-3 z-20 w-36">
+                <p className="text-xs text-gray-500 mb-2">음량 {Math.round(ttsVolume * 100)}%</p>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.1"
+                  value={ttsVolume}
+                  onChange={(e) => setTtsVolume(parseFloat(e.target.value))}
+                  className="w-full accent-indigo-500"
+                />
+              </div>
+            )}
+          </div>
         </div>
         <div className="flex justify-center mt-2">
           <ProgressDots
