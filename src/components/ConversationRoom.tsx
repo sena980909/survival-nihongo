@@ -8,16 +8,21 @@ import {
   BookmarkedExpression,
 } from "@/store/learningStore";
 import { scenarios } from "@/data/scenarios";
+import {
+  conversationFlows,
+  ConversationChoice,
+} from "@/data/conversationFlows";
 import CorrectionCard from "./CorrectionCard";
 import KanjiCard from "./KanjiCard";
 import ConversationComplete from "./ConversationComplete";
 import ProgressDots from "./ProgressDots";
 
-interface Choice {
+interface DisplayChoice {
   text: string;
   text_ko: string;
   text_pronunciation: string;
   quality: "best" | "acceptable" | "poor";
+  _originalIndex: number;
 }
 
 const NPC_EMOTIONS: Record<string, string> = {
@@ -39,20 +44,22 @@ export default function ConversationRoom() {
     toggleBookmark,
     addLearnedKanji,
     goToScenarioList,
-    resetConversation,
     setLoading,
   } = useLearningStore();
 
-  const [choices, setChoices] = useState<Choice[]>([]);
+  const [choices, setChoices] = useState<DisplayChoice[]>([]);
   const [initialized, setInitialized] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [autoTts, setAutoTts] = useState(true);
   const [showTranslation, setShowTranslation] = useState<string | null>(null);
-  const [conversationStep, setConversationStep] = useState(0);
+  const [currentNodeIndex, setCurrentNodeIndex] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scenario = scenarios.find((s) => s.id === currentScenarioId);
+  const flow = currentScenarioId
+    ? conversationFlows[currentScenarioId]
+    : undefined;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -61,6 +68,24 @@ export default function ConversationRoom() {
   useEffect(() => {
     scrollToBottom();
   }, [messages, choices]);
+
+  // 선택지 랜덤 셔플
+  const shuffleChoices = (
+    original: ConversationChoice[]
+  ): DisplayChoice[] => {
+    const indexed = original.map((c, i) => ({
+      text: c.text,
+      text_ko: c.textKo,
+      text_pronunciation: c.textPronunciation,
+      quality: c.quality,
+      _originalIndex: i,
+    }));
+    for (let i = indexed.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [indexed[i], indexed[j]] = [indexed[j], indexed[i]];
+    }
+    return indexed;
+  };
 
   // TTS 재생
   const playTts = (messageId: string, text: string): Promise<void> => {
@@ -117,11 +142,11 @@ export default function ConversationRoom() {
     });
   };
 
-  // 대화 시작
-  const initConversation = useCallback(async () => {
-    if (!scenario || initialized) return;
+  // 대화 시작 (로컬 데이터 사용)
+  const initConversation = useCallback(() => {
+    if (!scenario || !flow || initialized) return;
     setInitialized(true);
-    setLoading(true);
+    setCurrentNodeIndex(0);
 
     addMessage({
       id: `sys-${Date.now()}`,
@@ -130,65 +155,43 @@ export default function ConversationRoom() {
     });
 
     addMessage({
-      id: `obj-${Date.now()}`,
+      id: `obj-${Date.now() + 1}`,
       role: "system",
       content: `📚 학습 목표: ${scenario.learningObjectives.join(", ")}`,
     });
 
-    try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          scenarioId: scenario.id,
-          messages: [],
-          isInitial: true,
-        }),
-      });
+    // 첫 번째 NPC 메시지
+    const firstNode = flow[0];
+    const npcId = `npc-${Date.now() + 2}`;
+    addMessage({
+      id: npcId,
+      role: "npc",
+      content: firstNode.npcMessage,
+      contentKo: firstNode.npcMessageKo,
+      contentPronunciation: firstNode.npcMessagePronunciation,
+      npcEmotion: firstNode.npcEmotion,
+    });
 
-      const data = await res.json();
+    setChoices(shuffleChoices(firstNode.choices));
 
-      if (data.error) {
-        throw new Error(data.error);
-      }
-
-      const npcId = `npc-${Date.now()}`;
-      addMessage({
-        id: npcId,
-        role: "npc",
-        content: data.npc_reply,
-        contentKo: data.npc_reply_ko,
-        contentPronunciation: data.npc_reply_pronunciation,
-        npcEmotion: data.npc_emotion,
-      });
-
-      if (data.choices) {
-        setChoices(data.choices);
-      }
-
-      if (autoTts && data.npc_reply) {
-        playTts(npcId, data.npc_reply);
-      }
-    } catch {
-      addMessage({
-        id: `err-${Date.now()}`,
-        role: "system",
-        content: "연결에 실패했습니다. 다시 시도해주세요.",
-      });
+    if (autoTts) {
+      playTts(npcId, firstNode.npcMessage);
     }
-
-    setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scenario, initialized]);
+  }, [scenario, flow, initialized]);
 
   useEffect(() => {
     initConversation();
   }, [initConversation]);
 
-  // 선택지 클릭
-  const selectChoice = async (choice: Choice) => {
-    if (isLoading || !scenario) return;
+  // 선택지 클릭 (로컬 데이터 사용)
+  const selectChoice = async (choice: DisplayChoice) => {
+    if (isLoading || !scenario || !flow) return;
 
+    const currentNode = flow[currentNodeIndex];
+    const originalChoice = currentNode.choices[choice._originalIndex];
+
+    // 유저 메시지 추가
     const userMsgId = `user-${Date.now()}`;
     addMessage({
       id: userMsgId,
@@ -200,128 +203,115 @@ export default function ConversationRoom() {
 
     setChoices([]);
     setLoading(true);
-    setConversationStep((prev) => prev + 1);
 
-    try {
-      const chatHistory = messages
-        .filter((m) => m.role !== "system")
-        .map((m) => ({
-          role: m.role === "npc" ? "assistant" : "user",
-          content: m.content,
-        }));
-      chatHistory.push({ role: "user", content: choice.text });
-
-      const apiPromise = fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          scenarioId: scenario.id,
-          messages: chatHistory,
-        }),
-      }).then((res) => res.json());
-
-      if (autoTts) {
-        await playTts(userMsgId, choice.text);
-      }
-
-      const data = await apiPromise;
-
-      const npcMsgId = `npc-${Date.now()}`;
-      const npcMessage: ChatMessage = {
-        id: npcMsgId,
-        role: "npc",
-        content: data.npc_reply,
-        contentKo: data.npc_reply_ko,
-        contentPronunciation: data.npc_reply_pronunciation,
-        npcEmotion: data.npc_emotion,
-      };
-
-      if (data.correction) {
-        npcMessage.correction = {
-          wasCorrect: data.correction.was_correct,
-          explanation: data.correction.explanation,
-          betterExpression: data.correction.better_expression,
-          betterExpressionKo: data.correction.better_expression_ko,
-          betterExpressionPronunciation:
-            data.correction.better_expression_pronunciation,
-          grammarPoint: data.correction.grammar_point,
-        };
-      }
-
-      if (data.kanji_note) {
-        npcMessage.kanjiNote = {
-          kanji: data.kanji_note.kanji,
-          reading: data.kanji_note.reading,
-          pronunciation: data.kanji_note.pronunciation,
-          meaning: data.kanji_note.meaning,
-          explanation: data.kanji_note.explanation,
-        };
-        addLearnedKanji(data.kanji_note.kanji);
-      }
-
-      addMessage(npcMessage);
-
-      if (autoTts && data.npc_reply) {
-        await playTts(npcMsgId, data.npc_reply);
-      }
-
-      if (data.choices) {
-        setChoices(data.choices);
-      }
-
-      if (data.conversation_status === "completed") {
-        completeConversation();
-      }
-    } catch {
-      addMessage({
-        id: `err-${Date.now()}`,
-        role: "system",
-        content: "응답을 받지 못했습니다.",
-      });
+    // TTS 재생
+    if (autoTts) {
+      await playTts(userMsgId, choice.text);
     }
 
+    // 약간의 지연으로 자연스러운 느낌
+    await new Promise((r) => setTimeout(r, 500));
+
+    // 교정 피드백 포함 NPC 메시지
+    const npcMsgId = `npc-${Date.now()}`;
+    const npcMessage: ChatMessage = {
+      id: npcMsgId,
+      role: "npc",
+      content: currentNode.npcMessage,
+      contentKo: currentNode.npcMessageKo,
+      contentPronunciation: currentNode.npcMessagePronunciation,
+      npcEmotion: currentNode.npcEmotion,
+      correction: {
+        wasCorrect: originalChoice.correction.wasCorrect,
+        explanation: originalChoice.correction.explanation,
+        betterExpression: originalChoice.correction.betterExpression,
+        betterExpressionKo: originalChoice.correction.betterExpressionKo,
+        betterExpressionPronunciation:
+          originalChoice.correction.betterExpressionPronunciation,
+        grammarPoint: originalChoice.correction.grammarPoint,
+      },
+    };
+
+    if (currentNode.kanjiNote) {
+      npcMessage.kanjiNote = currentNode.kanjiNote;
+      addLearnedKanji(currentNode.kanjiNote.kanji);
+    }
+
+    // 다음 노드로 이동
+    const nextIndex = currentNodeIndex + 1;
+
+    if (currentNode.isLast || nextIndex >= flow.length) {
+      // 마지막 노드: 교정 메시지만 추가하고 대화 완료
+      // NPC 메시지를 교정 카드용으로 조정
+      npcMessage.content = "";
+      npcMessage.contentKo = undefined;
+      npcMessage.contentPronunciation = undefined;
+      addMessage(npcMessage);
+      setLoading(false);
+      completeConversation();
+      return;
+    }
+
+    // 다음 NPC 메시지 표시
+    const nextNode = flow[nextIndex];
+
+    // 교정 피드백 (현재 노드 기반)
+    const correctionMsgId = `correction-${Date.now()}`;
+    const correctionMsg: ChatMessage = {
+      id: correctionMsgId,
+      role: "npc",
+      content: nextNode.npcMessage,
+      contentKo: nextNode.npcMessageKo,
+      contentPronunciation: nextNode.npcMessagePronunciation,
+      npcEmotion: nextNode.npcEmotion,
+      correction: {
+        wasCorrect: originalChoice.correction.wasCorrect,
+        explanation: originalChoice.correction.explanation,
+        betterExpression: originalChoice.correction.betterExpression,
+        betterExpressionKo: originalChoice.correction.betterExpressionKo,
+        betterExpressionPronunciation:
+          originalChoice.correction.betterExpressionPronunciation,
+        grammarPoint: originalChoice.correction.grammarPoint,
+      },
+    };
+
+    if (currentNode.kanjiNote) {
+      correctionMsg.kanjiNote = currentNode.kanjiNote;
+    }
+
+    addMessage(correctionMsg);
+
+    if (autoTts) {
+      await playTts(correctionMsgId, nextNode.npcMessage);
+    }
+
+    setCurrentNodeIndex(nextIndex);
+    setChoices(shuffleChoices(nextNode.choices));
     setLoading(false);
   };
 
-  // 도움말 요청
-  const handleHelp = async () => {
-    if (!scenario || isLoading) return;
-    setLoading(true);
+  // 도움말 (로컬 — 각 선택지의 뉘앙스를 보여줌)
+  const handleHelp = () => {
+    if (!flow || isLoading) return;
 
-    try {
-      const chatHistory = messages
-        .filter((m) => m.role !== "system")
-        .map((m) => ({
-          role: m.role === "npc" ? "assistant" : "user",
-          content: m.content,
-        }));
+    const currentNode = flow[currentNodeIndex];
+    const hints = currentNode.choices
+      .map((c) => {
+        const label =
+          c.quality === "best"
+            ? "⭐"
+            : c.quality === "acceptable"
+            ? "🔵"
+            : "🔴";
+        return `${label} "${c.text}" (${c.textPronunciation}) — ${c.textKo}`;
+      })
+      .join("\n");
 
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          scenarioId: scenario.id,
-          messages: chatHistory,
-          requestHelp: true,
-        }),
-      });
-
-      const data = await res.json();
-
-      addMessage({
-        id: `help-${Date.now()}`,
-        role: "system",
-        content: `💡 ${data.correction?.explanation || data.npc_reply_ko || "각 선택지를 잘 비교해보세요!"}`,
-      });
-    } catch {
-      addMessage({
-        id: `err-${Date.now()}`,
-        role: "system",
-        content: "도움말을 가져오지 못했습니다.",
-      });
-    }
-
-    setLoading(false);
+    addMessage({
+      id: `help-${Date.now()}`,
+      role: "system",
+      content: `💡 각 선택지의 뜻을 참고하세요:\n${hints}\n\n⭐ 가장 적절 | 🔵 괜찮음 | 🔴 부적절`,
+    });
   };
 
   // 나가기
@@ -339,7 +329,7 @@ export default function ConversationRoom() {
   useEffect(() => {
     if (messages.length === 0 && initialized && !isConversationComplete) {
       setInitialized(false);
-      setConversationStep(0);
+      setCurrentNodeIndex(0);
     }
   }, [messages.length, initialized, isConversationComplete]);
 
@@ -361,7 +351,7 @@ export default function ConversationRoom() {
 
   if (!scenario) return null;
 
-  const estimatedTotalSteps = 5;
+  const totalSteps = flow ? flow.length : 5;
 
   return (
     <div className="flex flex-col h-screen bg-gray-50">
@@ -401,8 +391,8 @@ export default function ConversationRoom() {
         </div>
         <div className="flex justify-center mt-2">
           <ProgressDots
-            current={Math.min(conversationStep, estimatedTotalSteps)}
-            total={estimatedTotalSteps}
+            current={Math.min(currentNodeIndex, totalSteps)}
+            total={totalSteps}
           />
         </div>
       </div>
@@ -438,29 +428,31 @@ export default function ConversationRoom() {
                     <p className="text-xs text-gray-400 mb-1">
                       {scenario.npcName}
                     </p>
-                    <div className="bg-white rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm border border-gray-100">
-                      <p className="text-gray-900 text-sm whitespace-pre-wrap">
-                        {msg.content}
-                      </p>
-                      {msg.contentPronunciation && (
-                        <p className="text-xs text-gray-400 mt-1">
-                          ({msg.contentPronunciation})
+                    {msg.content && (
+                      <div className="bg-white rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm border border-gray-100">
+                        <p className="text-gray-900 text-sm whitespace-pre-wrap">
+                          {msg.content}
                         </p>
-                      )}
-                      {/* 한국어 번역 토글 */}
-                      <AnimatePresence>
-                        {showTranslation === msg.id && msg.contentKo && (
-                          <motion.p
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: "auto" }}
-                            exit={{ opacity: 0, height: 0 }}
-                            className="text-xs text-gray-500 mt-2 pt-2 border-t border-gray-100"
-                          >
-                            🇰🇷 {msg.contentKo}
-                          </motion.p>
+                        {msg.contentPronunciation && (
+                          <p className="text-xs text-gray-400 mt-1">
+                            ({msg.contentPronunciation})
+                          </p>
                         )}
-                      </AnimatePresence>
-                    </div>
+                        {/* 한국어 번역 토글 */}
+                        <AnimatePresence>
+                          {showTranslation === msg.id && msg.contentKo && (
+                            <motion.p
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: "auto" }}
+                              exit={{ opacity: 0, height: 0 }}
+                              className="text-xs text-gray-500 mt-2 pt-2 border-t border-gray-100"
+                            >
+                              🇰🇷 {msg.contentKo}
+                            </motion.p>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    )}
 
                     {/* 교정 카드 */}
                     {msg.correction && (
@@ -476,32 +468,36 @@ export default function ConversationRoom() {
                     {/* 한자 카드 */}
                     {msg.kanjiNote && <KanjiCard kanjiNote={msg.kanjiNote} />}
 
-                    <div className="flex gap-3 mt-1.5">
-                      <button
-                        onClick={() => playTts(msg.id, msg.content)}
-                        className={`text-xs flex items-center gap-1 transition ${
-                          playingId === msg.id
-                            ? "text-indigo-500"
-                            : "text-gray-400 hover:text-gray-600"
-                        }`}
-                      >
-                        {playingId === msg.id ? "🔊 재생 중..." : "🔈 듣기"}
-                      </button>
-                      {msg.contentKo && (
+                    {msg.content && (
+                      <div className="flex gap-3 mt-1.5">
                         <button
-                          onClick={() =>
-                            setShowTranslation(
-                              showTranslation === msg.id ? null : msg.id
-                            )
-                          }
-                          className="text-xs text-gray-400 hover:text-gray-600 transition"
+                          onClick={() => playTts(msg.id, msg.content)}
+                          className={`text-xs flex items-center gap-1 transition ${
+                            playingId === msg.id
+                              ? "text-indigo-500"
+                              : "text-gray-400 hover:text-gray-600"
+                          }`}
                         >
-                          {showTranslation === msg.id
-                            ? "🇰🇷 번역 숨기기"
-                            : "🇰🇷 번역 보기"}
+                          {playingId === msg.id
+                            ? "🔊 재생 중..."
+                            : "🔈 듣기"}
                         </button>
-                      )}
-                    </div>
+                        {msg.contentKo && (
+                          <button
+                            onClick={() =>
+                              setShowTranslation(
+                                showTranslation === msg.id ? null : msg.id
+                              )
+                            }
+                            className="text-xs text-gray-400 hover:text-gray-600 transition"
+                          >
+                            {showTranslation === msg.id
+                              ? "🇰🇷 번역 숨기기"
+                              : "🇰🇷 번역 보기"}
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : (
@@ -603,7 +599,9 @@ export default function ConversationRoom() {
           !isConversationComplete && (
             <div className="text-center py-2">
               <p className="text-gray-400 text-sm">
-                {isLoading ? "응답을 기다리는 중..." : "선택지를 기다리는 중..."}
+                {isLoading
+                  ? "응답을 기다리는 중..."
+                  : "선택지를 기다리는 중..."}
               </p>
             </div>
           )

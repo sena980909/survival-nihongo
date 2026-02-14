@@ -13,25 +13,25 @@ JSONの前後にマークダウンのコードブロック記号は絶対に含�
 {
   "npc_reply": "（日本語でNPCとしての返答。必ず何か言ってください）",
   "npc_reply_ko": "（npc_replyの韓国語翻訳）",
-  "npc_reply_pronunciation": "（npc_replyの韓国語発音表記。例：スミマセン→스미마셍）",
+  "npc_reply_pronunciation": "（日本語の音を韓国語の文字で表記。意味の翻訳ではない！例：パスポートを見せてください→파스포-토오 미세테쿠다사이）",
   "npc_emotion": "neutral",
   "choices": [
     {
       "text": "（日本語の選択肢1 - 最も適切な回答）",
-      "text_ko": "（韓国語翻訳）",
-      "text_pronunciation": "（韓国語発音表記）",
+      "text_ko": "（韓国語の意味翻訳）",
+      "text_pronunciation": "（日本語の音を韓国語で表記。例：はい→하이、ありがとう→아리가또）",
       "quality": "best"
     },
     {
       "text": "（日本語の選択肢2 - まあまあの回答）",
-      "text_ko": "（韓国語翻訳）",
-      "text_pronunciation": "（韓国語発音表記）",
+      "text_ko": "（韓国語の意味翻訳）",
+      "text_pronunciation": "（日本語の音を韓国語で表記）",
       "quality": "acceptable"
     },
     {
       "text": "（日本語の選択肢3 - 不適切な回答）",
-      "text_ko": "（韓国語翻訳）",
-      "text_pronunciation": "（韓国語発音表記）",
+      "text_ko": "（韓国語の意味翻訳）",
+      "text_pronunciation": "（日本語の音を韓国語で表記）",
       "quality": "poor"
     }
   ],
@@ -41,12 +41,17 @@ JSONの前後にマークダウンのコードブロック記号は絶対に含�
 【重要ルール】
 - npc_reply: NPCのセリフ（日本語）。必ず入れること。
 - npc_reply_ko: NPCのセリフの韓国語翻訳。
-- npc_reply_pronunciation: NPCのセリフの韓国語発音表記（カタカナではなく韓国語で。例：ありがとうございます→아리가또고자이마스）。
+- npc_reply_pronunciation: 日本語の音を韓国語の文字で書いたもの。意味の翻訳ではなく、日本語をそのまま韓国語の文字で発音表記する。
+  例：「パスポートを見せてください」→「파스포-토오 미세테쿠다사이」
+  例：「ありがとうございます」→「아리가또고자이마스」
+  例：「すみません」→「스미마셍」
+  ※ 韓国語の意味翻訳（例：여권을 보여주세요）を入れてはいけない！
 - npc_emotion: "neutral", "happy", "confused", "encouraging" のいずれか。
 - choices: 必ず3つの選択肢を提供。ユーザーが次に言うべきセリフの候補。
   - quality は "best", "acceptable", "poor" のいずれか。
   - 選択肢の順番は毎回ランダムにすること（bestを常に最初にしない）。
-  - 各選択肢に日本語(text)、韓国語翻訳(text_ko)、韓国語発音(text_pronunciation)を含める。
+  - text_ko: 韓国語の意味翻訳（例：네, 이것이 제 여권입니다）
+  - text_pronunciation: 日本語の音を韓国語で表記（例：하이, 코치라가 와타시노 파스포-토데스）。text_koと同じ内容を入れてはいけない！
 - conversation_status: "ongoing" または "completed"（会話の目標を全て達成した場合）。
 `;
 
