@@ -23,6 +23,13 @@ export interface KanjiItem {
   context: string;
 }
 
+export interface BonusExpression {
+  japanese: string;
+  reading: string;
+  korean: string;
+  pronunciation: string;
+}
+
 export interface Scenario {
   id: string;
   category: ScenarioCategory;
@@ -37,6 +44,7 @@ export interface Scenario {
   kanjiList: KanjiItem[];
   estimatedMinutes: number;
   systemPrompt: string;
+  bonusExpressions?: BonusExpression[];
 }
 
 export const categoryInfo: Record<
@@ -1371,6 +1379,18 @@ export const scenarios: Scenario[] = [
       },
     ],
     estimatedMinutes: 7,
+    bonusExpressions: [
+      { japanese: "頭が痛い", reading: "あたまがいたい", korean: "머리가 아프다", pronunciation: "아타마가 이타이" },
+      { japanese: "歯が痛い", reading: "はがいたい", korean: "이가 아프다", pronunciation: "하가 이타이" },
+      { japanese: "喉が痛い", reading: "のどがいたい", korean: "목이 아프다", pronunciation: "노도가 이타이" },
+      { japanese: "腰が痛い", reading: "こしがいたい", korean: "허리가 아프다", pronunciation: "코시가 이타이" },
+      { japanese: "熱があります", reading: "ねつがあります", korean: "열이 있습니다", pronunciation: "네츠가 아리마스" },
+      { japanese: "咳が出ます", reading: "せきがでます", korean: "기침이 납니다", pronunciation: "세키가 데마스" },
+      { japanese: "鼻水が出ます", reading: "はなみずがでます", korean: "콧물이 납니다", pronunciation: "하나미즈가 데마스" },
+      { japanese: "めまいがします", reading: "めまいがします", korean: "어지럽습니다", pronunciation: "메마이가 시마스" },
+      { japanese: "アレルギーがあります", reading: "あれるぎーがあります", korean: "알레르기가 있습니다", pronunciation: "아레루기-가 아리마스" },
+      { japanese: "ズキズキします", reading: "ずきずきします", korean: "욱신욱신 합니다", pronunciation: "즈키즈키 시마스" },
+    ],
     systemPrompt: `あなたは日本の病院の医者です。以下のルールを厳守してください：
 
 【ペルソナ】
@@ -1461,6 +1481,14 @@ export const scenarios: Scenario[] = [
       },
     ],
     estimatedMinutes: 5,
+    bonusExpressions: [
+      { japanese: "食前に飲んでください", reading: "しょくぜんにのんでください", korean: "식전에 드세요", pronunciation: "쇼쿠젠니 논데쿠다사이" },
+      { japanese: "食後に飲んでください", reading: "しょくごにのんでください", korean: "식후에 드세요", pronunciation: "쇼쿠고니 논데쿠다사이" },
+      { japanese: "一日三回", reading: "いちにちさんかい", korean: "하루 세 번", pronunciation: "이치니치 상카이" },
+      { japanese: "水で飲んでください", reading: "みずでのんでください", korean: "물로 드세요", pronunciation: "미즈데 논데쿠다사이" },
+      { japanese: "眠くなることがあります", reading: "ねむくなることがあります", korean: "졸릴 수 있습니다", pronunciation: "네무쿠 나루 코토가 아리마스" },
+      { japanese: "お大事に", reading: "おだいじに", korean: "몸조심하세요", pronunciation: "오다이지니" },
+    ],
     systemPrompt: `あなたは薬局の薬剤師です。以下のルールを厳守してください：
 
 【ペルソナ】

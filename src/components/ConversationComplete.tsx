@@ -1,6 +1,7 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useLearningStore, ChatMessage } from "@/store/learningStore";
 import { scenarios } from "@/data/scenarios";
 
@@ -19,6 +20,7 @@ export default function ConversationComplete({
   } = useLearningStore();
 
   const scenario = scenarios.find((s) => s.id === currentScenarioId);
+  const [showBonus, setShowBonus] = useState(false);
 
   const correctCount = messages.filter(
     (m) => m.correction?.wasCorrect
@@ -26,16 +28,18 @@ export default function ConversationComplete({
   const totalFeedback = messages.filter((m) => m.correction).length;
   const kanjiCount = messages.filter((m) => m.kanjiNote).length;
 
+  const bonusExpressions = scenario?.bonusExpressions;
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="absolute inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+      className="absolute inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-sm overflow-y-auto py-8"
     >
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        className="bg-white rounded-3xl p-6 mx-4 max-w-sm w-full shadow-xl"
+        className="bg-white rounded-3xl p-6 mx-4 max-w-sm w-full shadow-xl my-auto"
       >
         <div className="text-center mb-5">
           <div className="text-5xl mb-3">🎉</div>
@@ -67,6 +71,52 @@ export default function ConversationComplete({
             </span>
           </div>
         </div>
+
+        {/* 보너스 표현 */}
+        {bonusExpressions && bonusExpressions.length > 0 && (
+          <div className="mb-5">
+            <button
+              onClick={() => setShowBonus(!showBonus)}
+              className="w-full flex items-center justify-between px-4 py-3 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl transition text-sm"
+            >
+              <span className="font-semibold text-amber-700">
+                💡 알아두면 좋은 표현 {bonusExpressions.length}개
+              </span>
+              <span className="text-amber-500 text-xs">
+                {showBonus ? "접기 ▲" : "펼치기 ▼"}
+              </span>
+            </button>
+            <AnimatePresence>
+              {showBonus && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="mt-2 space-y-1.5 max-h-52 overflow-y-auto">
+                    {bonusExpressions.map((expr, idx) => (
+                      <div
+                        key={idx}
+                        className="bg-white border border-amber-100 rounded-lg px-3 py-2"
+                      >
+                        <p className="text-sm font-medium text-gray-900">
+                          {expr.japanese}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          {expr.reading} ({expr.pronunciation})
+                        </p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          {expr.korean}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
 
         <div className="space-y-2">
           <button
