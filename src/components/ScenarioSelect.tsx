@@ -12,8 +12,8 @@ import { useLearningStore } from "@/store/learningStore";
 const ALL_CATEGORIES: ("all" | ScenarioCategory)[] = [
   "all",
   "airport",
-  "food",
   "transport",
+  "food",
   "accommodation",
   "shopping",
   "daily",

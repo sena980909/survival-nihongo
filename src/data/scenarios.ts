@@ -144,6 +144,373 @@ export const scenarios: Scenario[] = [
 - 滞在目的・期間・場所の3つを伝えたら conversation_status: "completed"`,
   },
 
+  // ===== 교통 =====
+  {
+    id: "asking-directions",
+    category: "transport",
+    name: "길 묻기",
+    nameJa: "道を聞く",
+    description:
+      "구글맵이 안 됩니다. 스카이트리까지 가야 하는데 지나가는 사람에게 길을 물어봅시다.",
+    emoji: "🗺️",
+    npcName: "행인",
+    npcRole: "通行人",
+    learningObjectives: [
+      "길을 정중하게 묻기",
+      "방향 표현 이해하기",
+      "확인/되묻기 표현",
+    ],
+    keyExpressions: [
+      {
+        japanese: "すみません、道を教えてください",
+        reading: "すみません、みちをおしえてください",
+        korean: "실례합니다, 길을 알려주세요",
+        koreanPronunciation: "스미마셍, 미치오 오시에테 쿠다사이",
+        usage: "처음 말을 걸 때",
+      },
+      {
+        japanese: "右に曲がるんですね",
+        reading: "みぎにまがるんですね",
+        korean: "오른쪽으로 도는 거죠?",
+        koreanPronunciation: "미기니 마가룬데스네",
+        usage: "방향을 확인할 때",
+      },
+      {
+        japanese: "ありがとうございます",
+        reading: "ありがとうございます",
+        korean: "감사합니다",
+        koreanPronunciation: "아리가또고자이마스",
+        usage: "감사 인사",
+      },
+    ],
+    kanjiList: [
+      {
+        kanji: "右",
+        reading: "みぎ",
+        koreanPronunciation: "미기",
+        meaning: "오른쪽",
+        context: "방향을 나타낼 때",
+      },
+      {
+        kanji: "左",
+        reading: "ひだり",
+        koreanPronunciation: "히다리",
+        meaning: "왼쪽",
+        context: "방향을 나타낼 때",
+      },
+      {
+        kanji: "交差点",
+        reading: "こうさてん",
+        koreanPronunciation: "코-사텡",
+        meaning: "교차로",
+        context: "도로가 만나는 지점",
+      },
+      {
+        kanji: "駅",
+        reading: "えき",
+        koreanPronunciation: "에키",
+        meaning: "역",
+        context: "전철이나 기차가 정차하는 곳",
+      },
+    ],
+    estimatedMinutes: 5,
+    systemPrompt: `あなたは東京の街を歩いている日本人の通行人です。以下のルールを厳守してください：
+
+【ペルソナ】
+- 急いでいるけど外国人には親切にしようとする一般人
+- 自然な日本語を使う
+- 方向を身振り手振りで説明するような話し方
+
+【会話の流れ】
+1. ユーザーが話しかけてくるのを待つ（最初は「はい？」と返す）
+2. 道を聞かれたら「ああ、スカイツリーですね」と確認
+3. 方向を説明する：「この道をまっすぐ行って、二つ目の交差点を右に曲がって...」
+4. 駅を使うことも提案する
+5. 最後に「頑張ってね！」と励ます
+
+【教育ガイダンス】
+- bestを選んだ場合: 通行人は嬉しそうに教える。feedbackで丁寧な聞き方のポイントを説明
+- acceptableを選んだ場合: 通行人は理解する。feedbackでより自然な道の聞き方を紹介
+- poorを選んだ場合: 通行人は困惑するが親切に対応。feedbackで正しい表現を説明
+
+【学習ポイント】
+- すみません の使い方
+- 方向の表現（右、左、まっすぐ）
+- 確認の表現（〜んですね？）
+
+【完了条件】
+- 丁寧に道を聞いて、方向を確認できたら conversation_status: "completed"`,
+  },
+  {
+    id: "taxi-ride",
+    category: "transport",
+    name: "택시 타기",
+    nameJa: "タクシー",
+    description:
+      "짐이 많아서 택시를 탔습니다. 기사님에게 목적지를 알려주고 요금을 확인해봅시다.",
+    emoji: "🚕",
+    npcName: "택시 기사",
+    npcRole: "タクシー運転手",
+    learningObjectives: [
+      "목적지 전달하기",
+      "경유지/요청 표현",
+      "요금 확인하기",
+    ],
+    keyExpressions: [
+      {
+        japanese: "東京タワーまでお願いします",
+        reading: "とうきょうタワーまでおねがいします",
+        korean: "도쿄타워까지 부탁합니다",
+        koreanPronunciation: "토-쿄-타와-마데 오네가이시마스",
+        usage: "목적지를 말할 때",
+      },
+      {
+        japanese: "ここで止めてください",
+        reading: "ここでとめてください",
+        korean: "여기서 세워주세요",
+        koreanPronunciation: "코코데 토메테 쿠다사이",
+        usage: "내릴 곳을 지정할 때",
+      },
+      {
+        japanese: "いくらですか",
+        reading: "いくらですか",
+        korean: "얼마예요?",
+        koreanPronunciation: "이쿠라데스카",
+        usage: "요금을 물어볼 때",
+      },
+    ],
+    kanjiList: [
+      {
+        kanji: "右折",
+        reading: "うせつ",
+        koreanPronunciation: "우세츠",
+        meaning: "우회전",
+        context: "택시 기사에게 방향을 알려줄 때",
+      },
+      {
+        kanji: "左折",
+        reading: "させつ",
+        koreanPronunciation: "사세츠",
+        meaning: "좌회전",
+        context: "택시 기사에게 방향을 알려줄 때",
+      },
+      {
+        kanji: "信号",
+        reading: "しんごう",
+        koreanPronunciation: "싱고-",
+        meaning: "신호등",
+        context: "교차로의 신호등",
+      },
+    ],
+    estimatedMinutes: 5,
+    systemPrompt: `あなたはタクシーの運転手です。以下のルールを厳守してください：
+
+【ペルソナ】
+- ベテランで穏やかなタクシー運転手
+- 丁寧だが親しみやすい
+- 外国人客にも慣れている
+
+【会話の流れ】
+1. 「どちらまで？」から始める
+2. 目的地を聞いたら「○○ですね、かしこまりました」と確認
+3. 道中「渋滞していますね」などの世間話
+4. 到着したら「着きましたよ」と伝える
+5. 料金を伝えて「ありがとうございました」
+
+【教育ガイダンス】
+- bestを選んだ場合: 運転手はスムーズに対応。feedbackで使った表現を褒める
+- acceptableを選んだ場合: 運転手は理解する。feedbackでより自然な表現を紹介
+- poorを選んだ場合: 運転手は聞き返す。feedbackで正しい伝え方を説明
+
+【学習ポイント】
+- 〜までお願いします（目的地の伝え方）
+- 〜てください（依頼表現）
+- 料金の確認表現
+
+【完了条件】
+- 目的地を伝えて、到着後に料金を確認したら conversation_status: "completed"`,
+  },
+  {
+    id: "train-station",
+    category: "transport",
+    name: "기차역",
+    nameJa: "駅",
+    description:
+      "전철을 타고 이동해야 합니다. 역 창구에서 표를 사고 타는 곳을 확인해봅시다.",
+    emoji: "🚃",
+    npcName: "역무원",
+    npcRole: "駅員",
+    learningObjectives: [
+      "표 구매하기",
+      "노선/플랫폼 확인하기",
+      "환승 방법 묻기",
+    ],
+    keyExpressions: [
+      {
+        japanese: "渋谷までの切符をください",
+        reading: "しぶやまでのきっぷをください",
+        korean: "시부야까지 표 주세요",
+        koreanPronunciation: "시부야마데노 킷푸오 쿠다사이",
+        usage: "표를 살 때",
+      },
+      {
+        japanese: "何番線ですか",
+        reading: "なんばんせんですか",
+        korean: "몇 번 선이에요?",
+        koreanPronunciation: "남방셍데스카",
+        usage: "플랫폼을 물어볼 때",
+      },
+      {
+        japanese: "乗り換えはありますか",
+        reading: "のりかえはありますか",
+        korean: "환승이 있나요?",
+        koreanPronunciation: "노리카에와 아리마스카",
+        usage: "환승 여부를 확인할 때",
+      },
+    ],
+    kanjiList: [
+      {
+        kanji: "切符",
+        reading: "きっぷ",
+        koreanPronunciation: "킷푸",
+        meaning: "표 (승차권)",
+        context: "전철이나 기차를 탈 때 필요한 표",
+      },
+      {
+        kanji: "乗換",
+        reading: "のりかえ",
+        koreanPronunciation: "노리카에",
+        meaning: "환승",
+        context: "다른 노선으로 갈아타는 것",
+      },
+      {
+        kanji: "出口",
+        reading: "でぐち",
+        koreanPronunciation: "데구치",
+        meaning: "출구",
+        context: "역이나 건물에서 나가는 곳",
+      },
+    ],
+    estimatedMinutes: 6,
+    systemPrompt: `あなたは駅の窓口にいる駅員です。以下のルールを厳守してください：
+
+【ペルソナ】
+- 親切で丁寧な駅員
+- 外国人観光客に慣れている
+- わかりやすく説明しようとする
+
+【会話の流れ】
+1. 「はい、いらっしゃいませ」から始める
+2. 行き先を聞く
+3. 切符の種類を案内する（片道/往復）
+4. 何番線か、乗り換えの有無を説明する
+5. 「お気をつけて」と見送る
+
+【教育ガイダンス】
+- bestを選んだ場合: 駅員はスムーズに案内。feedbackで交通関連表現を説明
+- acceptableを選んだ場合: 駅員は理解して案内。feedbackでより正確な表現を紹介
+- poorを選んだ場合: 駅員は丁寧に聞き返す。feedbackで正しい聞き方を説明
+
+【学習ポイント】
+- 〜までの切符（目的地＋切符の表現）
+- 何番線（プラットフォームの聞き方）
+- 乗り換え関連の表現
+
+【完了条件】
+- 切符を購入し、乗る場所を確認したら conversation_status: "completed"`,
+  },
+  {
+    id: "narita-skyliner",
+    category: "transport",
+    name: "나리타→우에노 (스카이라이너)",
+    nameJa: "成田空港→上野（スカイライナー）",
+    description:
+      "나리타 공항에서 우에노까지 스카이라이너 또는 버스 표를 현장에서 구매해봅시다.",
+    emoji: "🚄",
+    npcName: "매표소 직원",
+    npcRole: "京成電鉄のチケットカウンター職員",
+    learningObjectives: [
+      "교통편 표 현장 구매하기",
+      "목적지와 좌석 요청하기",
+      "출발 시간 확인하기",
+    ],
+    keyExpressions: [
+      {
+        japanese: "上野までのスカイライナーをお願いします",
+        reading: "うえのまでのスカイライナーをおねがいします",
+        korean: "우에노까지 스카이라이너 부탁합니다",
+        koreanPronunciation: "우에노마데노 스카이라이나-오 오네가이시마스",
+        usage: "스카이라이너 표를 구매할 때",
+      },
+      {
+        japanese: "次の便は何時ですか",
+        reading: "つぎのびんはなんじですか",
+        korean: "다음 편은 몇 시인가요",
+        koreanPronunciation: "츠기노 빙와 난지데스카",
+        usage: "출발 시간을 물어볼 때",
+      },
+      {
+        japanese: "バスと電車、どちらが早いですか",
+        reading: "バスとでんしゃ、どちらがはやいですか",
+        korean: "버스와 전철, 어느 쪽이 빠른가요",
+        koreanPronunciation: "바스토 덴샤, 도치라가 하야이데스카",
+        usage: "교통수단을 비교할 때",
+      },
+    ],
+    kanjiList: [
+      {
+        kanji: "空港",
+        reading: "くうこう",
+        koreanPronunciation: "쿠-코-",
+        meaning: "공항",
+        context: "飛行機が発着する場所",
+      },
+      {
+        kanji: "片道",
+        reading: "かたみち",
+        koreanPronunciation: "카타미치",
+        meaning: "편도",
+        context: "行きだけの切符",
+      },
+      {
+        kanji: "指定席",
+        reading: "していせき",
+        koreanPronunciation: "시테-세키",
+        meaning: "지정석",
+        context: "座席が決まっている切符",
+      },
+    ],
+    estimatedMinutes: 5,
+    systemPrompt: `あなたは成田空港の京成電鉄チケットカウンターの職員です。
+名前：山田（やまだ）
+性格：親切で効率的。外国人旅行者の対応に慣れている。
+
+【シナリオ設定】
+成田空港第1ターミナルの京成線チケットカウンター。
+ユーザー（韓国人旅行者）が上野方面の切符を買いに来た。
+
+【会話の流れ】
+1. 「いらっしゃいませ」から始める
+2. 行き先と交通手段（スカイライナー/アクセス特急/バス）を確認
+3. 片道・往復、枚数を確認
+4. 出発時間とホームの案内
+5. 支払い
+
+【教育ガイダンス】
+- bestを選んだ場合: スムーズに対応。feedbackで交通関連の表現を説明
+- acceptableを選んだ場合: 理解して対応。より正確な表現を紹介
+- poorを選んだ場合: 優しく聞き返す。正しい伝え方を説明
+
+【学習ポイント】
+- 〇〇までお願いします（目的地の指定）
+- 片道/往復の選択
+- 出発時間の確認
+- 支払い方法の指定
+
+【完了条件】
+- 切符を購入し、出発ホームを確認したら conversation_status: "completed"`,
+  },
+
   // ===== 음식 =====
   {
     id: "convenience-store",
@@ -419,282 +786,6 @@ export const scenarios: Scenario[] = [
 
 【完了条件】
 - 人数・日時・名前を伝えて予約が完了したら conversation_status: "completed"`,
-  },
-
-  // ===== 교통 =====
-  {
-    id: "asking-directions",
-    category: "transport",
-    name: "길 묻기",
-    nameJa: "道を聞く",
-    description:
-      "구글맵이 안 됩니다. 스카이트리까지 가야 하는데 지나가는 사람에게 길을 물어봅시다.",
-    emoji: "🗺️",
-    npcName: "행인",
-    npcRole: "通行人",
-    learningObjectives: [
-      "길을 정중하게 묻기",
-      "방향 표현 이해하기",
-      "확인/되묻기 표현",
-    ],
-    keyExpressions: [
-      {
-        japanese: "すみません、道を教えてください",
-        reading: "すみません、みちをおしえてください",
-        korean: "실례합니다, 길을 알려주세요",
-        koreanPronunciation: "스미마셍, 미치오 오시에테 쿠다사이",
-        usage: "처음 말을 걸 때",
-      },
-      {
-        japanese: "右に曲がるんですね",
-        reading: "みぎにまがるんですね",
-        korean: "오른쪽으로 도는 거죠?",
-        koreanPronunciation: "미기니 마가룬데스네",
-        usage: "방향을 확인할 때",
-      },
-      {
-        japanese: "ありがとうございます",
-        reading: "ありがとうございます",
-        korean: "감사합니다",
-        koreanPronunciation: "아리가또고자이마스",
-        usage: "감사 인사",
-      },
-    ],
-    kanjiList: [
-      {
-        kanji: "右",
-        reading: "みぎ",
-        koreanPronunciation: "미기",
-        meaning: "오른쪽",
-        context: "방향을 나타낼 때",
-      },
-      {
-        kanji: "左",
-        reading: "ひだり",
-        koreanPronunciation: "히다리",
-        meaning: "왼쪽",
-        context: "방향을 나타낼 때",
-      },
-      {
-        kanji: "交差点",
-        reading: "こうさてん",
-        koreanPronunciation: "코-사텡",
-        meaning: "교차로",
-        context: "도로가 만나는 지점",
-      },
-      {
-        kanji: "駅",
-        reading: "えき",
-        koreanPronunciation: "에키",
-        meaning: "역",
-        context: "전철이나 기차가 정차하는 곳",
-      },
-    ],
-    estimatedMinutes: 5,
-    systemPrompt: `あなたは東京の街を歩いている日本人の通行人です。以下のルールを厳守してください：
-
-【ペルソナ】
-- 急いでいるけど外国人には親切にしようとする一般人
-- 自然な日本語を使う
-- 方向を身振り手振りで説明するような話し方
-
-【会話の流れ】
-1. ユーザーが話しかけてくるのを待つ（最初は「はい？」と返す）
-2. 道を聞かれたら「ああ、スカイツリーですね」と確認
-3. 方向を説明する：「この道をまっすぐ行って、二つ目の交差点を右に曲がって...」
-4. 駅を使うことも提案する
-5. 最後に「頑張ってね！」と励ます
-
-【教育ガイダンス】
-- bestを選んだ場合: 通行人は嬉しそうに教える。feedbackで丁寧な聞き方のポイントを説明
-- acceptableを選んだ場合: 通行人は理解する。feedbackでより自然な道の聞き方を紹介
-- poorを選んだ場合: 通行人は困惑するが親切に対応。feedbackで正しい表現を説明
-
-【学習ポイント】
-- すみません の使い方
-- 方向の表現（右、左、まっすぐ）
-- 確認の表現（〜んですね？）
-
-【完了条件】
-- 丁寧に道を聞いて、方向を確認できたら conversation_status: "completed"`,
-  },
-  {
-    id: "taxi-ride",
-    category: "transport",
-    name: "택시 타기",
-    nameJa: "タクシー",
-    description:
-      "짐이 많아서 택시를 탔습니다. 기사님에게 목적지를 알려주고 요금을 확인해봅시다.",
-    emoji: "🚕",
-    npcName: "택시 기사",
-    npcRole: "タクシー運転手",
-    learningObjectives: [
-      "목적지 전달하기",
-      "경유지/요청 표현",
-      "요금 확인하기",
-    ],
-    keyExpressions: [
-      {
-        japanese: "東京タワーまでお願いします",
-        reading: "とうきょうタワーまでおねがいします",
-        korean: "도쿄타워까지 부탁합니다",
-        koreanPronunciation: "토-쿄-타와-마데 오네가이시마스",
-        usage: "목적지를 말할 때",
-      },
-      {
-        japanese: "ここで止めてください",
-        reading: "ここでとめてください",
-        korean: "여기서 세워주세요",
-        koreanPronunciation: "코코데 토메테 쿠다사이",
-        usage: "내릴 곳을 지정할 때",
-      },
-      {
-        japanese: "いくらですか",
-        reading: "いくらですか",
-        korean: "얼마예요?",
-        koreanPronunciation: "이쿠라데스카",
-        usage: "요금을 물어볼 때",
-      },
-    ],
-    kanjiList: [
-      {
-        kanji: "右折",
-        reading: "うせつ",
-        koreanPronunciation: "우세츠",
-        meaning: "우회전",
-        context: "택시 기사에게 방향을 알려줄 때",
-      },
-      {
-        kanji: "左折",
-        reading: "させつ",
-        koreanPronunciation: "사세츠",
-        meaning: "좌회전",
-        context: "택시 기사에게 방향을 알려줄 때",
-      },
-      {
-        kanji: "信号",
-        reading: "しんごう",
-        koreanPronunciation: "싱고-",
-        meaning: "신호등",
-        context: "교차로의 신호등",
-      },
-    ],
-    estimatedMinutes: 5,
-    systemPrompt: `あなたはタクシーの運転手です。以下のルールを厳守してください：
-
-【ペルソナ】
-- ベテランで穏やかなタクシー運転手
-- 丁寧だが親しみやすい
-- 外国人客にも慣れている
-
-【会話の流れ】
-1. 「どちらまで？」から始める
-2. 目的地を聞いたら「○○ですね、かしこまりました」と確認
-3. 道中「渋滞していますね」などの世間話
-4. 到着したら「着きましたよ」と伝える
-5. 料金を伝えて「ありがとうございました」
-
-【教育ガイダンス】
-- bestを選んだ場合: 運転手はスムーズに対応。feedbackで使った表現を褒める
-- acceptableを選んだ場合: 運転手は理解する。feedbackでより自然な表現を紹介
-- poorを選んだ場合: 運転手は聞き返す。feedbackで正しい伝え方を説明
-
-【学習ポイント】
-- 〜までお願いします（目的地の伝え方）
-- 〜てください（依頼表現）
-- 料金の確認表現
-
-【完了条件】
-- 目的地を伝えて、到着後に料金を確認したら conversation_status: "completed"`,
-  },
-  {
-    id: "train-station",
-    category: "transport",
-    name: "기차역",
-    nameJa: "駅",
-    description:
-      "전철을 타고 이동해야 합니다. 역 창구에서 표를 사고 타는 곳을 확인해봅시다.",
-    emoji: "🚃",
-    npcName: "역무원",
-    npcRole: "駅員",
-    learningObjectives: [
-      "표 구매하기",
-      "노선/플랫폼 확인하기",
-      "환승 방법 묻기",
-    ],
-    keyExpressions: [
-      {
-        japanese: "渋谷までの切符をください",
-        reading: "しぶやまでのきっぷをください",
-        korean: "시부야까지 표 주세요",
-        koreanPronunciation: "시부야마데노 킷푸오 쿠다사이",
-        usage: "표를 살 때",
-      },
-      {
-        japanese: "何番線ですか",
-        reading: "なんばんせんですか",
-        korean: "몇 번 선이에요?",
-        koreanPronunciation: "남방셍데스카",
-        usage: "플랫폼을 물어볼 때",
-      },
-      {
-        japanese: "乗り換えはありますか",
-        reading: "のりかえはありますか",
-        korean: "환승이 있나요?",
-        koreanPronunciation: "노리카에와 아리마스카",
-        usage: "환승 여부를 확인할 때",
-      },
-    ],
-    kanjiList: [
-      {
-        kanji: "切符",
-        reading: "きっぷ",
-        koreanPronunciation: "킷푸",
-        meaning: "표 (승차권)",
-        context: "전철이나 기차를 탈 때 필요한 표",
-      },
-      {
-        kanji: "乗換",
-        reading: "のりかえ",
-        koreanPronunciation: "노리카에",
-        meaning: "환승",
-        context: "다른 노선으로 갈아타는 것",
-      },
-      {
-        kanji: "出口",
-        reading: "でぐち",
-        koreanPronunciation: "데구치",
-        meaning: "출구",
-        context: "역이나 건물에서 나가는 곳",
-      },
-    ],
-    estimatedMinutes: 6,
-    systemPrompt: `あなたは駅の窓口にいる駅員です。以下のルールを厳守してください：
-
-【ペルソナ】
-- 親切で丁寧な駅員
-- 外国人観光客に慣れている
-- わかりやすく説明しようとする
-
-【会話の流れ】
-1. 「はい、いらっしゃいませ」から始める
-2. 行き先を聞く
-3. 切符の種類を案内する（片道/往復）
-4. 何番線か、乗り換えの有無を説明する
-5. 「お気をつけて」と見送る
-
-【教育ガイダンス】
-- bestを選んだ場合: 駅員はスムーズに案内。feedbackで交通関連表現を説明
-- acceptableを選んだ場合: 駅員は理解して案内。feedbackでより正確な表現を紹介
-- poorを選んだ場合: 駅員は丁寧に聞き返す。feedbackで正しい聞き方を説明
-
-【学習ポイント】
-- 〜までの切符（目的地＋切符の表現）
-- 何番線（プラットフォームの聞き方）
-- 乗り換え関連の表現
-
-【完了条件】
-- 切符を購入し、乗る場所を確認したら conversation_status: "completed"`,
   },
 
   // ===== 숙소 =====
@@ -1158,97 +1249,5 @@ export const scenarios: Scenario[] = [
 
 【完了条件】
 - 症状を伝え、薬を選び、服用方法を確認したら conversation_status: "completed"`,
-  },
-  // ===== 교통 (추가) =====
-  {
-    id: "narita-skyliner",
-    category: "transport",
-    name: "나리타→우에노 (스카이라이너)",
-    nameJa: "成田空港→上野（スカイライナー）",
-    description:
-      "나리타 공항에서 우에노까지 스카이라이너 또는 버스 표를 현장에서 구매해봅시다.",
-    emoji: "🚄",
-    npcName: "매표소 직원",
-    npcRole: "京成電鉄のチケットカウンター職員",
-    learningObjectives: [
-      "교통편 표 현장 구매하기",
-      "목적지와 좌석 요청하기",
-      "출발 시간 확인하기",
-    ],
-    keyExpressions: [
-      {
-        japanese: "上野までのスカイライナーをお願いします",
-        reading: "うえのまでのスカイライナーをおねがいします",
-        korean: "우에노까지 스카이라이너 부탁합니다",
-        koreanPronunciation: "우에노마데노 스카이라이나-오 오네가이시마스",
-        usage: "스카이라이너 표를 구매할 때",
-      },
-      {
-        japanese: "次の便は何時ですか",
-        reading: "つぎのびんはなんじですか",
-        korean: "다음 편은 몇 시인가요",
-        koreanPronunciation: "츠기노 빙와 난지데스카",
-        usage: "출발 시간을 물어볼 때",
-      },
-      {
-        japanese: "バスと電車、どちらが早いですか",
-        reading: "バスとでんしゃ、どちらがはやいですか",
-        korean: "버스와 전철, 어느 쪽이 빠른가요",
-        koreanPronunciation: "바스토 덴샤, 도치라가 하야이데스카",
-        usage: "교통수단을 비교할 때",
-      },
-    ],
-    kanjiList: [
-      {
-        kanji: "空港",
-        reading: "くうこう",
-        koreanPronunciation: "쿠-코-",
-        meaning: "공항",
-        context: "飛行機が発着する場所",
-      },
-      {
-        kanji: "片道",
-        reading: "かたみち",
-        koreanPronunciation: "카타미치",
-        meaning: "편도",
-        context: "行きだけの切符",
-      },
-      {
-        kanji: "指定席",
-        reading: "していせき",
-        koreanPronunciation: "시테-세키",
-        meaning: "지정석",
-        context: "座席が決まっている切符",
-      },
-    ],
-    estimatedMinutes: 5,
-    systemPrompt: `あなたは成田空港の京成電鉄チケットカウンターの職員です。
-名前：山田（やまだ）
-性格：親切で効率的。外国人旅行者の対応に慣れている。
-
-【シナリオ設定】
-成田空港第1ターミナルの京成線チケットカウンター。
-ユーザー（韓国人旅行者）が上野方面の切符を買いに来た。
-
-【会話の流れ】
-1. 「いらっしゃいませ」から始める
-2. 行き先と交通手段（スカイライナー/アクセス特急/バス）を確認
-3. 片道・往復、枚数を確認
-4. 出発時間とホームの案内
-5. 支払い
-
-【教育ガイダンス】
-- bestを選んだ場合: スムーズに対応。feedbackで交通関連の表現を説明
-- acceptableを選んだ場合: 理解して対応。より正確な表現を紹介
-- poorを選んだ場合: 優しく聞き返す。正しい伝え方を説明
-
-【学習ポイント】
-- 〇〇までお願いします（目的地の指定）
-- 片道/往復の選択
-- 出発時間の確認
-- 支払い方法の指定
-
-【完了条件】
-- 切符を購入し、出発ホームを確認したら conversation_status: "completed"`,
   },
 ];
