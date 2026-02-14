@@ -15,6 +15,22 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "니혼고 회화 연습 | Nihongo Practice",
   description: "일본 여행 실전 회화 시뮬레이터",
+  openGraph: {
+    title: "니혼고 회화 연습",
+    description: "일본 여행 실전 회화 시뮬레이터 — 16개 상황별 대화 연습",
+    url: "https://survival-nihongo.vercel.app",
+    siteName: "Survival Nihongo",
+    images: [
+      {
+        url: "https://survival-nihongo.vercel.app/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "니혼고 회화 연습",
+      },
+    ],
+    locale: "ko_KR",
+    type: "website",
+  },
 };
 
 export default function RootLayout({
