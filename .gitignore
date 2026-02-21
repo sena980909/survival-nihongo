@@ -41,3 +41,9 @@ yarn-error.log*
 next-env.d.ts
 
 .vercel
+
+# android/capacitor
+/android/
+*.keystore
+capacitor.config.ts
+nul

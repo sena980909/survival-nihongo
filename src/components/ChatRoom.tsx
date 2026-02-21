@@ -26,6 +26,8 @@ function shuffleChoices(choices: DialogueChoice[]): DialogueChoice[] {
   return shuffled;
 }
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
+
 export default function ChatRoom() {
   const {
     currentStageId,
@@ -91,7 +93,7 @@ export default function ChatRoom() {
 
       setPlayingId(messageId);
 
-      fetch("/api/tts", {
+      fetch(`${API_URL}/api/tts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text }),
@@ -306,7 +308,7 @@ export default function ChatRoom() {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/chat", {
+      const res = await fetch(`${API_URL}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
