@@ -55,7 +55,9 @@ export default function ConversationRoom() {
   const [showVolumeSlider, setShowVolumeSlider] = useState(false);
   const [showTranslation, setShowTranslation] = useState<string | null>(null);
   const [currentNodeIndex, setCurrentNodeIndex] = useState(0);
+  const [isTtsLoading, setIsTtsLoading] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const ttsCacheRef = useRef<Map<string, string>>(new Map());
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scenario = scenarios.find((s) => s.id === currentScenarioId);
@@ -89,9 +91,30 @@ export default function ConversationRoom() {
     return indexed;
   };
 
-  // TTS 재생
+  // TTS 프리로드 (캐시에 미리 저장)
+  const preloadTts = useCallback((text: string) => {
+    if (ttsCacheRef.current.has(text)) return;
+    fetch("/api/tts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("TTS failed");
+        return res.blob();
+      })
+      .then((blob) => {
+        const url = URL.createObjectURL(blob);
+        ttsCacheRef.current.set(text, url);
+      })
+      .catch(() => {});
+  }, []);
+
+  // TTS 재생 (캐시 우선)
   const playTts = (messageId: string, text: string): Promise<void> => {
     return new Promise((resolve) => {
+      if (isTtsLoading) { resolve(); return; }
+
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current = null;
@@ -103,6 +126,42 @@ export default function ConversationRoom() {
       }
 
       setPlayingId(messageId);
+      setIsTtsLoading(true);
+
+      const playFromUrl = (url: string, revoke: boolean) => {
+        const audio = new Audio(url);
+        audio.volume = ttsVolume;
+        audioRef.current = audio;
+
+        audio.onended = () => {
+          setPlayingId(null);
+          setIsTtsLoading(false);
+          audioRef.current = null;
+          if (revoke) URL.revokeObjectURL(url);
+          resolve();
+        };
+
+        audio.onerror = () => {
+          setPlayingId(null);
+          setIsTtsLoading(false);
+          audioRef.current = null;
+          if (revoke) URL.revokeObjectURL(url);
+          resolve();
+        };
+
+        audio.play().catch(() => {
+          setPlayingId(null);
+          setIsTtsLoading(false);
+          resolve();
+        });
+      };
+
+      // 캐시에 있으면 즉시 재생
+      const cached = ttsCacheRef.current.get(text);
+      if (cached) {
+        playFromUrl(cached, false);
+        return;
+      }
 
       fetch("/api/tts", {
         method: "POST",
@@ -115,31 +174,12 @@ export default function ConversationRoom() {
         })
         .then((blob) => {
           const url = URL.createObjectURL(blob);
-          const audio = new Audio(url);
-          audio.volume = ttsVolume;
-          audioRef.current = audio;
-
-          audio.onended = () => {
-            setPlayingId(null);
-            audioRef.current = null;
-            URL.revokeObjectURL(url);
-            resolve();
-          };
-
-          audio.onerror = () => {
-            setPlayingId(null);
-            audioRef.current = null;
-            URL.revokeObjectURL(url);
-            resolve();
-          };
-
-          audio.play().catch(() => {
-            setPlayingId(null);
-            resolve();
-          });
+          ttsCacheRef.current.set(text, url);
+          playFromUrl(url, false);
         })
         .catch(() => {
           setPlayingId(null);
+          setIsTtsLoading(false);
           resolve();
         });
     });
@@ -176,6 +216,9 @@ export default function ConversationRoom() {
     });
 
     setChoices(shuffleChoices(firstNode.choices));
+
+    // 선택지 TTS 프리로드
+    firstNode.choices.forEach((c) => preloadTts(c.text));
 
     if (autoTts) {
       playTts(npcId, firstNode.npcMessage);
@@ -286,6 +329,8 @@ export default function ConversationRoom() {
 
     setCurrentNodeIndex(nextIndex);
     setChoices(shuffleChoices(nextNode.choices));
+    // 다음 선택지 TTS 프리로드
+    nextNode.choices.forEach((c) => preloadTts(c.text));
     setLoading(false);
 
     if (autoTts) {
@@ -498,9 +543,12 @@ export default function ConversationRoom() {
                       <div className="flex gap-3 mt-1.5">
                         <button
                           onClick={() => playTts(msg.id, msg.content)}
+                          disabled={playingId === msg.id || isTtsLoading}
                           className={`text-xs flex items-center gap-1 transition ${
                             playingId === msg.id
                               ? "text-indigo-500"
+                              : isTtsLoading
+                              ? "text-gray-300 cursor-not-allowed"
                               : "text-gray-400 hover:text-gray-600"
                           }`}
                         >
@@ -543,9 +591,12 @@ export default function ConversationRoom() {
                   </div>
                   <button
                     onClick={() => playTts(msg.id, msg.content)}
+                    disabled={playingId === msg.id || isTtsLoading}
                     className={`mt-1 text-xs flex items-center gap-1 transition justify-end w-full ${
                       playingId === msg.id
                         ? "text-indigo-500"
+                        : isTtsLoading
+                        ? "text-gray-300 cursor-not-allowed"
                         : "text-gray-400 hover:text-gray-600"
                     }`}
                   >
@@ -584,7 +635,7 @@ export default function ConversationRoom() {
       </div>
 
       {/* 선택지 영역 */}
-      <div className="bg-white border-t border-gray-200 px-4 py-3 shrink-0">
+      <div className="bg-white border-t border-gray-200 px-4 py-3 shrink-0 max-h-[45vh] overflow-y-auto">
         {choices.length > 0 && !isConversationComplete ? (
           <div className="space-y-2">
             <div className="flex items-center justify-between mb-1">

@@ -62,9 +62,11 @@ export default function ChatRoom() {
   } | null>(null);
   const [initialized, setInitialized] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
+  const [isTtsLoading, setIsTtsLoading] = useState(false);
   const [autoTts, setAutoTts] = useState(true);
   const [showTranslation, setShowTranslation] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const ttsCacheRef = useRef<Map<string, string>>(new Map());
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const stage = stages.find((s) => s.id === currentStageId);
@@ -78,9 +80,30 @@ export default function ChatRoom() {
     scrollToBottom();
   }, [messages, shuffledChoices]);
 
-  // TTS
+  // TTS 프리로드
+  const preloadTts = useCallback((text: string) => {
+    if (ttsCacheRef.current.has(text)) return;
+    fetch(`${API_URL}/api/tts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("TTS failed");
+        return res.blob();
+      })
+      .then((blob) => {
+        const url = URL.createObjectURL(blob);
+        ttsCacheRef.current.set(text, url);
+      })
+      .catch(() => {});
+  }, []);
+
+  // TTS 재생 (캐시 우선)
   const playTts = (messageId: string, text: string): Promise<void> => {
     return new Promise((resolve) => {
+      if (isTtsLoading) { resolve(); return; }
+
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current = null;
@@ -92,6 +115,34 @@ export default function ChatRoom() {
       }
 
       setPlayingId(messageId);
+      setIsTtsLoading(true);
+
+      const playFromUrl = (url: string) => {
+        const audio = new Audio(url);
+        audioRef.current = audio;
+        audio.onended = () => {
+          setPlayingId(null);
+          setIsTtsLoading(false);
+          audioRef.current = null;
+          resolve();
+        };
+        audio.onerror = () => {
+          setPlayingId(null);
+          setIsTtsLoading(false);
+          resolve();
+        };
+        audio.play().catch(() => {
+          setPlayingId(null);
+          setIsTtsLoading(false);
+          resolve();
+        });
+      };
+
+      const cached = ttsCacheRef.current.get(text);
+      if (cached) {
+        playFromUrl(cached);
+        return;
+      }
 
       fetch(`${API_URL}/api/tts`, {
         method: "POST",
@@ -104,26 +155,12 @@ export default function ChatRoom() {
         })
         .then((blob) => {
           const url = URL.createObjectURL(blob);
-          const audio = new Audio(url);
-          audioRef.current = audio;
-          audio.onended = () => {
-            setPlayingId(null);
-            audioRef.current = null;
-            URL.revokeObjectURL(url);
-            resolve();
-          };
-          audio.onerror = () => {
-            setPlayingId(null);
-            URL.revokeObjectURL(url);
-            resolve();
-          };
-          audio.play().catch(() => {
-            setPlayingId(null);
-            resolve();
-          });
+          ttsCacheRef.current.set(text, url);
+          playFromUrl(url);
         })
         .catch(() => {
           setPlayingId(null);
+          setIsTtsLoading(false);
           resolve();
         });
     });
@@ -164,6 +201,9 @@ export default function ChatRoom() {
 
     setShuffledChoices(shuffleChoices(firstStep.choices));
     setEducation(firstStep.education);
+
+    // 선택지 TTS 프리로드
+    firstStep.choices.forEach((c) => preloadTts(c.text));
 
     if (autoTts) {
       playTts(npcId, firstStep.npcLine);
@@ -294,6 +334,8 @@ export default function ChatRoom() {
 
     setShuffledChoices(shuffleChoices(nextStep.choices));
     setEducation(nextStep.education);
+    // 다음 선택지 TTS 프리로드
+    nextStep.choices.forEach((c) => preloadTts(c.text));
 
     if (autoTts) {
       await playTts(npcMsgId, nextStep.npcLine);
@@ -447,9 +489,12 @@ export default function ChatRoom() {
                     <div className="flex gap-3 mt-1">
                       <button
                         onClick={() => playTts(msg.id, msg.content)}
+                        disabled={playingId === msg.id || isTtsLoading}
                         className={`text-xs transition ${
                           playingId === msg.id
                             ? "text-blue-400"
+                            : isTtsLoading
+                            ? "text-gray-600 cursor-not-allowed"
                             : "text-gray-500 hover:text-gray-300"
                         }`}
                       >
@@ -489,9 +534,12 @@ export default function ChatRoom() {
                   </div>
                   <button
                     onClick={() => playTts(msg.id, msg.content)}
+                    disabled={playingId === msg.id || isTtsLoading}
                     className={`mt-1 text-xs flex items-center gap-1 transition justify-end w-full ${
                       playingId === msg.id
                         ? "text-blue-400"
+                        : isTtsLoading
+                        ? "text-gray-600 cursor-not-allowed"
                         : "text-gray-500 hover:text-gray-300"
                     }`}
                   >
@@ -602,7 +650,7 @@ export default function ChatRoom() {
       )}
 
       {/* 선택지 */}
-      <div className="bg-gray-900 border-t border-gray-800 px-4 py-3 shrink-0">
+      <div className="bg-gray-900 border-t border-gray-800 px-4 py-3 shrink-0 max-h-[45vh] overflow-y-auto">
         {shuffledChoices.length > 0 && !isGameOver && !isStageCleared ? (
           <div className="space-y-2">
             <div className="flex items-center justify-between mb-1">

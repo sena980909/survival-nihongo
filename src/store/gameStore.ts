@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import { EducationContent } from "@/data/dialogue";
 
 export interface ChatMessage {
@@ -51,7 +52,9 @@ interface GameState {
   toggleEducation: () => void;
 }
 
-export const useGameStore = create<GameState>((set, get) => ({
+export const useGameStore = create<GameState>()(
+  persist(
+    (set, get) => ({
   currentStageId: null,
   unlockedStages: [1],
   hp: 100,
@@ -159,4 +162,13 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   toggleEducation: () =>
     set((state) => ({ showEducation: !state.showEducation })),
-}));
+    }),
+    {
+      name: "nihongo-game",
+      partialize: (state) => ({
+        unlockedStages: state.unlockedStages,
+        hintCount: state.hintCount,
+      }),
+    }
+  )
+);
