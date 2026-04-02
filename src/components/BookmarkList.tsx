@@ -21,7 +21,7 @@ export default function BookmarkList() {
     <div className="min-h-screen bg-gray-50 pb-8">
       {/* 헤더 */}
       <div className="bg-white border-b border-gray-200 px-4 py-4 sticky top-0 z-10">
-        <div className="max-w-md mx-auto flex items-center gap-3">
+        <div className="max-w-lg mx-auto flex items-center gap-3">
           <button
             onClick={goToScenarioList}
             className="text-gray-400 hover:text-gray-700 transition text-sm"
@@ -35,7 +35,7 @@ export default function BookmarkList() {
         </div>
       </div>
 
-      <div className="max-w-md mx-auto px-4 mt-4">
+      <div className="max-w-lg mx-auto px-4 mt-4">
         {bookmarkedExpressions.length === 0 ? (
           <div className="text-center py-16">
             <div className="text-5xl mb-4">📚</div>

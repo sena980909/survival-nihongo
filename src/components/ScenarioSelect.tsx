@@ -6,6 +6,7 @@ import {
   scenarios,
   categoryInfo,
   type ScenarioCategory,
+  type Difficulty,
 } from "@/data/scenarios";
 import { useLearningStore } from "@/store/learningStore";
 
@@ -26,11 +27,22 @@ export default function ScenarioSelect() {
   const [selectedCategory, setSelectedCategory] = useState<
     "all" | ScenarioCategory
   >("all");
+  const [sortByOrder, setSortByOrder] = useState(false);
 
-  const filteredScenarios =
+  const difficultyLabel: Record<Difficulty, { text: string; color: string }> = {
+    1: { text: "초급", color: "bg-emerald-100 text-emerald-700" },
+    2: { text: "중급", color: "bg-amber-100 text-amber-700" },
+    3: { text: "고급", color: "bg-red-100 text-red-700" },
+  };
+
+  const baseScenarios =
     selectedCategory === "all"
       ? scenarios
       : scenarios.filter((s) => s.category === selectedCategory);
+
+  const filteredScenarios = sortByOrder
+    ? [...baseScenarios].sort((a, b) => a.order - b.order)
+    : baseScenarios;
 
   const getCompletionCount = (scenarioId: string) =>
     completedScenarios.filter((p) => p.scenarioId === scenarioId).length;
@@ -59,7 +71,7 @@ export default function ScenarioSelect() {
     <div className="min-h-screen bg-gray-50 pb-8">
       {/* 헤더 */}
       <div className="bg-white border-b border-gray-200 px-4 py-6">
-        <div className="max-w-md mx-auto">
+        <div className="max-w-lg mx-auto">
           <div className="flex items-center justify-between mb-1">
             <h1 className="text-2xl font-bold text-gray-900">
               일본어 회화 연습
@@ -103,7 +115,7 @@ export default function ScenarioSelect() {
 
       {/* 카테고리 필터 */}
       <div className="bg-white border-b border-gray-100 px-4 py-3 overflow-x-auto">
-        <div className="max-w-md mx-auto flex gap-2">
+        <div className="max-w-lg mx-auto flex gap-2">
           {ALL_CATEGORIES.map((cat) => (
             <button
               key={cat}
@@ -122,8 +134,22 @@ export default function ScenarioSelect() {
         </div>
       </div>
 
+      {/* 정렬 옵션 */}
+      <div className="max-w-lg mx-auto px-4 mt-3 flex items-center justify-end">
+        <button
+          onClick={() => setSortByOrder(!sortByOrder)}
+          className={`text-xs px-3 py-1.5 rounded-lg transition font-medium ${
+            sortByOrder
+              ? "bg-indigo-100 text-indigo-600"
+              : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+          }`}
+        >
+          {sortByOrder ? "추천 순서로 보기 ✓" : "추천 순서로 보기"}
+        </button>
+      </div>
+
       {/* 시나리오 카드 */}
-      <div className="max-w-md mx-auto px-4 mt-4 space-y-3">
+      <div className="max-w-lg mx-auto px-4 mt-3 space-y-3">
         {filteredScenarios.map((scenario, index) => {
           const count = getCompletionCount(scenario.id);
           const catInfo = categoryInfo[scenario.category];
@@ -152,6 +178,14 @@ export default function ScenarioSelect() {
                       >
                         {catInfo.emoji} {catInfo.name}
                       </span>
+                      <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${difficultyLabel[scenario.difficulty].color}`}>
+                        {difficultyLabel[scenario.difficulty].text}
+                      </span>
+                      {sortByOrder && (
+                        <span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full font-medium">
+                          #{scenario.order}
+                        </span>
+                      )}
                       {count > 0 && (
                         <span className="text-xs bg-emerald-100 text-emerald-600 px-1.5 py-0.5 rounded-full font-medium">
                           ✅ {count}회

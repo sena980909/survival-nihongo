@@ -60,7 +60,7 @@ export default function LearningStats() {
     <div className="min-h-screen bg-gray-50 pb-8">
       {/* 헤더 */}
       <div className="bg-white border-b border-gray-200 px-4 py-4">
-        <div className="max-w-md mx-auto flex items-center justify-between">
+        <div className="max-w-lg mx-auto flex items-center justify-between">
           <button
             onClick={goToScenarioList}
             className="text-sm text-gray-500 hover:text-gray-700 transition"
@@ -72,7 +72,7 @@ export default function LearningStats() {
         </div>
       </div>
 
-      <div className="max-w-md mx-auto px-4 mt-4 space-y-4">
+      <div className="max-w-lg mx-auto px-4 mt-4 space-y-4">
         {/* 전체 통계 카드 */}
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-white rounded-2xl border border-gray-200 p-4 text-center">
@@ -142,10 +142,13 @@ export default function LearningStats() {
             <div className="space-y-2">
               {recentHistory.map((record, i) => {
                 const date = new Date(record.completedAt);
-                const dateStr = `${date.getMonth() + 1}/${date.getDate()}`;
-                const timeStr = `${date.getHours()}:${String(
-                  date.getMinutes()
-                ).padStart(2, "0")}`;
+                const isValidDate = !isNaN(date.getTime());
+                const dateStr = isValidDate
+                  ? `${date.getMonth() + 1}/${date.getDate()}`
+                  : "-";
+                const timeStr = isValidDate
+                  ? `${date.getHours()}:${String(date.getMinutes()).padStart(2, "0")}`
+                  : "";
                 return (
                   <div
                     key={i}

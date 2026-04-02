@@ -38,3 +38,15 @@ body {
     height: 100dvh;
   }
 }
+
+/* 데스크탑 대화방 카드 */
+@media (min-width: 768px) {
+  .desktop-card {
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+    border-left: 1px solid #e5e7eb;
+    border-right: 1px solid #e5e7eb;
+    box-shadow: 0 0 24px rgba(0, 0, 0, 0.04);
+  }
+}

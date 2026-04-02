@@ -58,7 +58,26 @@ export default function ConversationRoom() {
   const [isTtsLoading, setIsTtsLoading] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const ttsCacheRef = useRef<Map<string, string>>(new Map());
+  const ttsVolumeRef = useRef(ttsVolume);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // ttsVolume ref 동기화
+  useEffect(() => {
+    ttsVolumeRef.current = ttsVolume;
+    if (audioRef.current) {
+      audioRef.current.volume = ttsVolume;
+    }
+  }, [ttsVolume]);
+
+  // 컴포넌트 언마운트 시 오디오 정리
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
 
   const scenario = scenarios.find((s) => s.id === currentScenarioId);
   const flow = currentScenarioId
@@ -130,7 +149,7 @@ export default function ConversationRoom() {
 
       const playFromUrl = (url: string, revoke: boolean) => {
         const audio = new Audio(url);
-        audio.volume = ttsVolume;
+        audio.volume = ttsVolumeRef.current;
         audioRef.current = audio;
 
         audio.onended = () => {
@@ -402,7 +421,7 @@ export default function ConversationRoom() {
   const totalSteps = flow ? flow.length : 5;
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
+    <div className="flex flex-col h-screen bg-gray-50 desktop-card">
       {/* 대화 완료 모달 */}
       {isConversationComplete && (
         <ConversationComplete messages={messages} />

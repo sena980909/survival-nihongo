@@ -30,6 +30,8 @@ export interface BonusExpression {
   pronunciation: string;
 }
 
+export type Difficulty = 1 | 2 | 3;
+
 export interface Scenario {
   id: string;
   category: ScenarioCategory;
@@ -39,6 +41,8 @@ export interface Scenario {
   emoji: string;
   npcName: string;
   npcRole: string;
+  difficulty: Difficulty;
+  order: number;
   learningObjectives: string[];
   keyExpressions: KeyExpression[];
   kanjiList: KanjiItem[];
@@ -72,6 +76,8 @@ export const scenarios: Scenario[] = [
     emoji: "🛂",
     npcName: "심사관",
     npcRole: "入国審査官",
+    difficulty: 1,
+    order: 1,
     learningObjectives: [
       "です/ます 경어 사용하기",
       "체류 목적 표현하기",
@@ -163,6 +169,8 @@ export const scenarios: Scenario[] = [
     emoji: "🗺️",
     npcName: "행인",
     npcRole: "通行人",
+    difficulty: 2,
+    order: 7,
     learningObjectives: [
       "길을 정중하게 묻기",
       "방향 표현 이해하기",
@@ -259,6 +267,8 @@ export const scenarios: Scenario[] = [
     emoji: "🚕",
     npcName: "택시 기사",
     npcRole: "タクシー運転手",
+    difficulty: 2,
+    order: 6,
     learningObjectives: [
       "목적지 전달하기",
       "경유지/요청 표현",
@@ -348,6 +358,8 @@ export const scenarios: Scenario[] = [
     emoji: "🚃",
     npcName: "역무원",
     npcRole: "駅員",
+    difficulty: 2,
+    order: 5,
     learningObjectives: [
       "표 구매하기",
       "노선/플랫폼 확인하기",
@@ -437,6 +449,8 @@ export const scenarios: Scenario[] = [
     emoji: "🚄",
     npcName: "매표소 직원",
     npcRole: "京成電鉄のチケットカウンター職員",
+    difficulty: 2,
+    order: 3,
     learningObjectives: [
       "교통편 표 현장 구매하기",
       "목적지와 좌석 요청하기",
@@ -529,6 +543,8 @@ export const scenarios: Scenario[] = [
     emoji: "💳",
     npcName: "역무원",
     npcRole: "駅員",
+    difficulty: 1,
+    order: 4,
     learningObjectives: [
       "IC카드 충전 요청하기",
       "잔액 확인 표현",
@@ -615,6 +631,8 @@ export const scenarios: Scenario[] = [
     emoji: "🏪",
     npcName: "편의점 점원",
     npcRole: "コンビニ店員",
+    difficulty: 1,
+    order: 2,
     learningObjectives: [
       "요청 표현 (~てください)",
       "예/아니오 대답하기",
@@ -704,6 +722,8 @@ export const scenarios: Scenario[] = [
     emoji: "🍺",
     npcName: "이자카야 점원",
     npcRole: "居酒屋の店員",
+    difficulty: 3,
+    order: 11,
     learningObjectives: [
       "추천 메뉴 물어보기",
       "음식/음료 주문하기",
@@ -800,6 +820,8 @@ export const scenarios: Scenario[] = [
     emoji: "📞",
     npcName: "레스토랑 직원",
     npcRole: "レストランの従業員",
+    difficulty: 3,
+    order: 12,
     learningObjectives: [
       "전화 예약 표현",
       "인원/시간 전달하기",
@@ -892,6 +914,8 @@ export const scenarios: Scenario[] = [
     emoji: "🏨",
     npcName: "프론트 직원",
     npcRole: "フロントスタッフ",
+    difficulty: 2,
+    order: 8,
     learningObjectives: [
       "예약 확인 표현",
       "요청/질문하기",
@@ -984,6 +1008,8 @@ export const scenarios: Scenario[] = [
     emoji: "👕",
     npcName: "가게 점원",
     npcRole: "洋服屋の店員",
+    difficulty: 2,
+    order: 10,
     learningObjectives: [
       "사이즈/색상 물어보기",
       "시착 요청하기",
@@ -1075,6 +1101,8 @@ export const scenarios: Scenario[] = [
     emoji: "⛩️",
     npcName: "관광안내원",
     npcRole: "観光案内のスタッフ",
+    difficulty: 2,
+    order: 9,
     learningObjectives: [
       "사진 촬영 부탁하기",
       "추천 장소 묻기",
@@ -1165,6 +1193,8 @@ export const scenarios: Scenario[] = [
     emoji: "🚻",
     npcName: "편의점 직원",
     npcRole: "コンビニの店員",
+    difficulty: 1,
+    order: 13,
     learningObjectives: [
       "화장실 위치 묻기",
       "정중한 부탁 표현",
@@ -1241,6 +1271,8 @@ export const scenarios: Scenario[] = [
     emoji: "📶",
     npcName: "카페 직원",
     npcRole: "カフェの店員",
+    difficulty: 1,
+    order: 14,
     learningObjectives: [
       "와이파이 사용 요청하기",
       "비밀번호 묻기",
@@ -1320,6 +1352,8 @@ export const scenarios: Scenario[] = [
     emoji: "🏥",
     npcName: "의사",
     npcRole: "医者",
+    difficulty: 3,
+    order: 15,
     learningObjectives: [
       "증상 설명하기",
       "통증 표현하기",
@@ -1429,6 +1463,8 @@ export const scenarios: Scenario[] = [
     emoji: "💊",
     npcName: "약사",
     npcRole: "薬剤師",
+    difficulty: 3,
+    order: 16,
     learningObjectives: [
       "증상 간단히 설명하기",
       "약 종류 물어보기",
